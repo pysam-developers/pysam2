@@ -5,7 +5,6 @@ import re
 import tempfile
 import os
 import io
-from contextlib import contextmanager
 
 from cpython.version cimport PY_MAJOR_VERSION, PY_MINOR_VERSION
 from cpython cimport PyBytes_Check, PyUnicode_Check
@@ -16,12 +15,6 @@ from libc.stdint cimport INT32_MAX, int32_t
 from libc.stdio cimport fprintf, stderr, fflush
 from libc.stdio cimport stdout as c_stdout
 from posix.fcntl cimport open as c_open, O_WRONLY
-
-from libcsamtools cimport samtools_main, samtools_set_stdout, samtools_set_stderr, \
-    samtools_close_stdout, samtools_close_stderr, samtools_set_stdout_fn, samtools_set_optind
-
-from libcbcftools cimport bcftools_main, bcftools_set_stdout, bcftools_set_stderr, \
-    bcftools_close_stdout, bcftools_close_stderr, bcftools_set_stdout_fn, bcftools_set_optind
 
 #####################################################################
 # hard-coded constants
@@ -254,175 +247,6 @@ cpdef parse_region(contig=None,
         raise ValueError('stop out of range (%i)' % rstop)
 
     return contig, rstart, rstop
-
-
-def _pysam_dispatch(collection,
-                    method,
-                    args=None,
-                    catch_stdout=True,
-                    is_usage=False,
-                    save_stdout=None):
-    '''call ``method`` in samtools/bcftools providing arguments in args.
-    
-    By default, stdout is redirected to a temporary file using the patched
-    C sources except for a few commands that have an explicit output option
-    (typically: -o). In these commands (such as samtools view), this explicit
-    option is used. If *is_usage* is True, then these explicit output options
-    will not be used.
-
-    Catching of stdout can be turned off by setting *catch_stdout* to
-    False.
-    '''
-
-    if method == "index" and args:
-        # We make sure that at least 1 input file exists,
-        # and if it doesn't we raise an IOError.
-        SIMPLE_FLAGS = ['-c', '--csi', '-f', '--force', '-t', '--tbi', '-n', '--nstats', '-s', '--stats']
-        ARGUMENTS = ['-m', '--min-shift', '-o', '--output-file', '--threads', '-@']
-        skip_next = False
-        for arg in args:
-            if skip_next:
-                skip_next = False
-                continue
-            if arg in SIMPLE_FLAGS or (len(arg) > 2 and arg.startswith('-@')):
-                continue
-            if arg in ARGUMENTS:
-                skip_next = True
-                continue
-            if not os.path.exists(arg):
-                raise IOError("No such file or directory: '%s'" % arg)
-            else:
-                break
-            
-    if args is None:
-        args = []
-    else:
-        args = list(args)
-
-    # redirect stderr to file
-    stderr_h, stderr_f = tempfile.mkstemp()
-        
-    # redirect stdout to file
-    if save_stdout:
-        stdout_f = save_stdout
-        stdout_h = c_open(force_bytes(stdout_f),
-                          O_WRONLY)
-        if stdout_h == -1:
-            raise IOError("error while opening {} for writing".format(stdout_f))
-
-        samtools_set_stdout_fn(force_bytes(stdout_f))
-        bcftools_set_stdout_fn(force_bytes(stdout_f))
-            
-    elif catch_stdout:
-        stdout_h, stdout_f = tempfile.mkstemp()
-        MAP_STDOUT_OPTIONS = {
-        "samtools": {
-            "view": "-o {}",
-            "mpileup": "-o {}",
-            "depad": "-o {}",
-            "calmd": "",  # uses pysam_stdout_fn
-        },
-            "bcftools": {}
-        }
-        
-        stdout_option = None
-        if collection == "bcftools":
-            # in bcftools, most methods accept -o, the exceptions
-            # are below:
-            if method not in ("index", "roh", "stats"):
-                stdout_option = "-o {}"
-        elif method in MAP_STDOUT_OPTIONS[collection]:
-            # special case - samtools view -c outputs on stdout
-            if not(method == "view" and "-c" in args):
-                stdout_option = MAP_STDOUT_OPTIONS[collection][method]
-
-        if stdout_option is not None and not is_usage:
-            os.close(stdout_h)
-            samtools_set_stdout_fn(force_bytes(stdout_f))
-            bcftools_set_stdout_fn(force_bytes(stdout_f))
-            args.extend(stdout_option.format(stdout_f).split(" "))
-            stdout_h = c_open(b"/dev/null", O_WRONLY)
-    else:
-        samtools_set_stdout_fn("-")
-        bcftools_set_stdout_fn("-")
-        stdout_h = c_open(b"/dev/null", O_WRONLY)
-
-    # setup the function call to samtools/bcftools main
-    cdef char ** cargs
-    cdef int i, n, retval, l
-    n = len(args)
-    method = force_bytes(method)
-    collection = force_bytes(collection)
-    args = [force_bytes(a) for a in args]
-
-    # allocate two more for first (dummy) argument (contains command)
-    cdef int extra_args = 0
-    if method == b"index":
-        extra_args = 1
-    # add extra arguments for commands accepting optional arguments
-    # such as 'samtools index x.bam [out.index]'
-    cargs = <char**>calloc(n + 2 + extra_args, sizeof(char *))
-    cargs[0] = collection
-    cargs[1] = method
-
-    # create copies of strings - getopt for long options permutes
-    # arguments
-    for i from 0 <= i < n:
-        l = len(args[i])
-        cargs[i + 2] = <char *>calloc(l + 1, sizeof(char))
-        strncpy(cargs[i + 2], args[i], l)
-    
-    # reset getopt. On OsX there getopt reset is different
-    # between getopt and getopt_long
-    if method in [b'index', b'cat', b'quickcheck',
-                  b'faidx', b'kprobaln']:
-        samtools_set_optind(1)
-        bcftools_set_optind(1)
-    else:
-        samtools_set_optind(0)
-        bcftools_set_optind(0)
-
-    # call samtools/bcftools
-    if collection == b"samtools":
-        samtools_set_stdout(stdout_h)
-        samtools_set_stderr(stderr_h)
-        retval = samtools_main(n + 2, cargs)
-        samtools_close_stdout()
-        samtools_close_stderr()
-    elif collection == b"bcftools":
-        bcftools_set_stdout(stdout_h)
-        bcftools_set_stderr(stderr_h)
-        retval = bcftools_main(n + 2, cargs)
-        bcftools_close_stdout()
-        bcftools_close_stderr()
-
-    for i from 0 <= i < n:
-        free(cargs[i + 2])
-    free(cargs)
-
-    # get error messages
-    def _collect(fn):
-        out = []
-        try:
-            with open(fn, "r") as inf:
-                out = inf.read()
-        except UnicodeDecodeError:
-            with open(fn, "rb") as inf:
-                # read binary output
-                out = inf.read()
-        finally:
-            os.remove(fn)
-        return out
-
-    out_stderr = _collect(stderr_f)
-    if save_stdout:
-        out_stdout = None
-    elif catch_stdout:
-        out_stdout = _collect(stdout_f)
-    else:
-        out_stdout = None
-        
-    return retval, out_stderr, out_stdout
 
 
 __all__ = ["qualitystring_to_array",
