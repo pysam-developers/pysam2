@@ -50,20 +50,6 @@ def changedir(path):
         os.chdir(save_dir)
 
 
-def run_configure(option):
-    sys.stdout.flush()
-    try:
-        retcode = subprocess.call(
-            " ".join(("./configure", option)),
-            shell=True)
-        if retcode != 0:
-            return False
-        else:
-            return True
-    except OSError as e:
-        return False
-
-
 def check_file_is_present(path_var, filename, msg):
     if path_var is None:
         raise ValueError(msg)
@@ -89,31 +75,6 @@ def set_compiler_envvars():
     finally:
         for var in tmp_vars:
             del os.environ[var]
-
-
-def configure_library(library_dir, env_options=None, options=[]):
-
-    configure_script = os.path.join(library_dir, "configure")
-
-    on_rtd = os.environ.get("READTHEDOCS") == "True"
-    # RTD has no bzip2 development libraries installed:
-    if on_rtd:
-        env_options = "--disable-bz2"
-
-    if not os.path.exists(configure_script):
-        raise ValueError(
-            "configure script {} does not exist".format(configure_script))
-
-    with changedir(library_dir), set_compiler_envvars():
-        if env_options is not None:
-            if run_configure(env_options):
-                return env_options
-
-        for option in options:
-            if run_configure(option):
-                return option
-
-    return None
 
 
 def distutils_dir_name(dname):
