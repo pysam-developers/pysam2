@@ -73,7 +73,7 @@ from cpython.version cimport PY_MAJOR_VERSION
 from pysam.libcutils cimport force_bytes, force_str, charptr_to_str
 from pysam.libcutils cimport encode_filename, from_string_and_size
 from pysam.libcalignedsegment cimport makeAlignedSegment, makePileupColumn
-from pysam.libchtslib cimport HTSFile, hisremote
+from pysam.libchtslib cimport HTSFile, hisremote, sam_index_build2, sam_index_build3
 
 if PY_MAJOR_VERSION >= 3:
     from io import StringIO
@@ -732,7 +732,7 @@ cdef class AlignmentFile(HTSFile):
         self.threads = 1
         self.is_stream = False
         self.is_remote = False
-        self.index = NULL
+        self._index = NULL
 
         if "filename" in kwargs:
             args = [kwargs["filename"]]
@@ -748,7 +748,7 @@ cdef class AlignmentFile(HTSFile):
     def has_index(self):
         """return true if htsfile has an existing (and opened) index.
         """
-        return self.index != NULL
+        return self._index != NULL
 
     def check_index(self):
         """return True if index is present.
@@ -768,7 +768,7 @@ cdef class AlignmentFile(HTSFile):
         if not self.is_bam and not self.is_cram:
             raise AttributeError(
                 "AlignmentFile.mapped only available in bam files")
-        if self.index == NULL:
+        if self._index == NULL:
             raise ValueError(
                 "mapping information not recorded in index "
                 "or index not available")
@@ -999,9 +999,9 @@ cdef class AlignmentFile(HTSFile):
 
                 if cfilename or cindexname:
                     with nogil:
-                        self.index = sam_index_load2(self.htsfile, cfilename, cindexname)
+                        self._index = sam_index_load2(self.htsfile, cfilename, cindexname)
 
-                    if not self.index and (cindexname or require_index):
+                    if not self._index and (cindexname or require_index):
                         if errno:
                             raise IOError(errno, force_str(strerror(errno)))
                         else:
@@ -1118,6 +1118,25 @@ cdef class AlignmentFile(HTSFile):
 
             return IteratorRowAll(self,
                                   multiple_iterators=multiple_iterators)
+
+    @staticmethod
+    def index(filename, filename_index=None, min_shift=0, threads=None):
+        cdef int retval
+
+        filename = force_bytes(filename)
+        cdef char * cfilename = filename
+        cdef char * cfilename_index = NULL
+        if filename_index:
+            filename_index = force_bytes(filename_index)
+            cfilename_idx = filename_index
+        if threads:
+            retval = sam_index_build3(filename, cfilename_index,
+                                      min_shift, threads)
+        else:
+            retval = sam_index_build2(filename, cfilename_index,
+                                      min_shift)
+        if retval < 0:
+            raise OSError("index building failed with error {}".format(retval))
 
     def head(self, n, multiple_iterators=True):
         '''return an iterator over the first n alignments.
@@ -1664,9 +1683,9 @@ cdef class AlignmentFile(HTSFile):
         cdef int ret = hts_close(self.htsfile)
         self.htsfile = NULL
 
-        if self.index != NULL:
-            hts_idx_destroy(self.index)
-            self.index = NULL
+        if self._index != NULL:
+            hts_idx_destroy(self._index)
+            self._index = NULL
 
         self.header = None
 
@@ -1684,9 +1703,9 @@ cdef class AlignmentFile(HTSFile):
             ret = hts_close(self.htsfile)
             self.htsfile = NULL
 
-        if self.index != NULL:
-            hts_idx_destroy(self.index)
-            self.index = NULL
+        if self._index != NULL:
+            hts_idx_destroy(self._index)
+            self._index = NULL
 
         self.header = None
 
@@ -1763,7 +1782,7 @@ cdef class AlignmentFile(HTSFile):
             cdef uint64_t mapped, unmapped
             for tid from 0 <= tid < self.header.nreferences:
                 with nogil:
-                    hts_idx_get_stat(self.index, tid, &mapped, &unmapped)
+                    hts_idx_get_stat(self._index, tid, &mapped, &unmapped)
                 total += mapped
             return total
 
@@ -1775,11 +1794,11 @@ cdef class AlignmentFile(HTSFile):
         def __get__(self):
             self.check_index()
             cdef int tid
-            cdef uint64_t total = hts_idx_get_n_no_coor(self.index)
+            cdef uint64_t total = hts_idx_get_n_no_coor(self._index)
             cdef uint64_t mapped, unmapped
             for tid from 0 <= tid < self.header.nreferences:
                 with nogil:
-                    hts_idx_get_stat(self.index, tid, &mapped, &unmapped)
+                    hts_idx_get_stat(self._index, tid, &mapped, &unmapped)
                 total += unmapped
             return total
 
@@ -1791,7 +1810,7 @@ cdef class AlignmentFile(HTSFile):
             self.check_index()
             cdef uint64_t n
             with nogil:
-                n = hts_idx_get_n_no_coor(self.index)
+                n = hts_idx_get_n_no_coor(self._index)
             return n
 
     def get_index_statistics(self):
@@ -1811,7 +1830,7 @@ cdef class AlignmentFile(HTSFile):
         # TODO: use header
         for tid from 0 <= tid < self.nreferences:
             with nogil:
-                hts_idx_get_stat(self.index, tid, &mapped, &unmapped)
+                hts_idx_get_stat(self._index, tid, &mapped, &unmapped)
             results.append(
                 IndexStats._make((
                     self.get_reference_name(tid),
@@ -1997,9 +2016,9 @@ cdef class IteratorRow:
                 if samfile.index_filename:
                     cindexname = samfile.index_filename
                 with nogil:
-                    self.index = sam_index_load2(self.htsfile, cfilename, cindexname)
+                    self._index = sam_index_load2(self.htsfile, cfilename, cindexname)
             else:
-                self.index = NULL
+                self._index = NULL
 
             # need to advance in newly opened file to position after header
             # better: use seek/tell?
@@ -2020,7 +2039,7 @@ cdef class IteratorRow:
 
         else:
             self.htsfile = samfile.htsfile
-            self.index = samfile.index
+            self._index = samfile._index
             self.owns_samfile = False
             self.header = samfile.header
 
@@ -2032,7 +2051,7 @@ cdef class IteratorRow:
         bam_destroy1(self.b)
         if self.owns_samfile:
             hts_close(self.htsfile)
-            hts_idx_destroy(self.index)
+            hts_idx_destroy(self._index)
 
 
 cdef class IteratorRowRegion(IteratorRow):
@@ -2060,7 +2079,7 @@ cdef class IteratorRowRegion(IteratorRow):
                              multiple_iterators=multiple_iterators)
         with nogil:
             self.iter = sam_itr_queryi(
-                self.index,
+                self._index,
                 tid,
                 beg,
                 stop)

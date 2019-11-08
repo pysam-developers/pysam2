@@ -12,7 +12,6 @@ import re
 import copy
 from collections import OrderedDict as odict
 import pysam
-import pysam.samtools
 from TestUtils import get_temp_filename, BAM_DATADIR
 
 if sys.version_info.major >= 3:
