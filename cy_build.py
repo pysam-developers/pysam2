@@ -29,6 +29,9 @@ def is_pip_install():
 
 
 class CyExtension(Extension):
+
+    cython_directives = {'language_level': "2"}
+    
     def __init__(self, *args, **kwargs):
         self._init_func = kwargs.pop("init_func", None)
         Extension.__init__(self, *args, **kwargs)

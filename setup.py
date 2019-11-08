@@ -29,7 +29,7 @@ import subprocess
 import sys
 import sysconfig
 from contextlib import contextmanager
-from setuptools import Extension, setup
+from setuptools import setup
 from cy_build import CyExtension as Extension, cy_build_ext as build_ext
 try:
     import cython
@@ -50,35 +50,14 @@ def changedir(path):
         os.chdir(save_dir)
 
 
-def run_configure(option):
-    sys.stdout.flush()
-    try:
-        retcode = subprocess.call(
-            " ".join(("./configure", option)),
-            shell=True)
-        if retcode != 0:
-            return False
-        else:
-            return True
-    except OSError as e:
-        return False
-
-
-def run_make_print_config():
-    stdout = subprocess.check_output(["make", "-s", "print-config"])
-    if IS_PYTHON3:
-        stdout = stdout.decode("ascii")
-
-    make_print_config = {}
-    for line in stdout.splitlines():
-        if "=" in line:
-            row = line.split("=")
-            if len(row) == 2:
-                make_print_config.update(
-                    {row[0].strip(): row[1].strip()})
-    return make_print_config
-
-
+def check_file_is_present(path_var, filename, msg):
+    if path_var is None:
+        raise ValueError(msg)
+    fn = os.path.join(path_var, filename)
+    if not os.path.exists(fn):
+        raise OSError("expected file {} not found".format(fn))
+    
+                          
 @contextmanager
 def set_compiler_envvars():
     tmp_vars = []
@@ -98,31 +77,6 @@ def set_compiler_envvars():
             del os.environ[var]
 
 
-def configure_library(library_dir, env_options=None, options=[]):
-
-    configure_script = os.path.join(library_dir, "configure")
-
-    on_rtd = os.environ.get("READTHEDOCS") == "True"
-    # RTD has no bzip2 development libraries installed:
-    if on_rtd:
-        env_options = "--disable-bz2"
-
-    if not os.path.exists(configure_script):
-        raise ValueError(
-            "configure script {} does not exist".format(configure_script))
-
-    with changedir(library_dir), set_compiler_envvars():
-        if env_options is not None:
-            if run_configure(env_options):
-                return env_options
-
-        for option in options:
-            if run_configure(option):
-                return option
-
-    return None
-
-
 def distutils_dir_name(dname):
     """Returns the name of a distutils build directory
     see: http://stackoverflow.com/questions/14320220/
@@ -140,36 +94,24 @@ def get_pysam_version():
     return version.__version__
 
 
-# How to link against HTSLIB
-# shared:   build shared chtslib from builtin htslib code.
-# external: use shared libhts.so compiled outside of
-#           pysam
-# separate: use included htslib and include in each extension
-#           module. No dependencies between modules and works with
-#           setup.py install, but wasteful in terms of memory and
-#           compilation time. Fallback if shared module compilation
-#           fails.
-
-HTSLIB_MODE = os.environ.get("HTSLIB_MODE", "shared")
 HTSLIB_LIBRARY_DIR = os.environ.get("HTSLIB_LIBRARY_DIR", None)
+if HTSLIB_LIBRARY_DIR is None and "CONDA_PREFIX" in os.environ:
+    HTSLIB_LIBRARY_DIR = os.path.join(os.environ.get("CONDA_PREFIX"), "lib")
+
+check_file_is_present(HTSLIB_LIBRARY_DIR, "libhts.so", "HTSLIB_LIBRARY_DIR not set")
+        
 HTSLIB_INCLUDE_DIR = os.environ.get("HTSLIB_INCLUDE_DIR", None)
-HTSLIB_CONFIGURE_OPTIONS = os.environ.get("HTSLIB_CONFIGURE_OPTIONS", None)
+if HTSLIB_INCLUDE_DIR is None and "CONDA_PREFIX" in os.environ:
+    HTSLIB_INCLUDE_DIR = os.path.join(os.environ.get("CONDA_PREFIX"), "include")
+
+check_file_is_present(HTSLIB_INCLUDE_DIR, "htslib/hts.h", "HTSLIB_INCLUDE_DIR not set")
+    
 HTSLIB_SOURCE = None
 
 package_list = ['pysam',
-                'pysam.include',
-                'pysam.include.samtools',
-                'pysam.include.bcftools',
-                'pysam.include.samtools.win32']
-package_dirs = {'pysam': 'pysam',
-                'pysam.include.samtools': 'samtools',
-                'pysam.include.bcftools': 'bcftools'}
+                'pysam.include']
+package_dirs = {'pysam': 'pysam'}
 
-# list of config files that will be automatically generated should
-# they not already exist or be created by configure scripts in the
-# subpackages.
-config_headers = ["samtools/config.h",
-                  "bcftools/config.h"]
 
 cmdclass = {'build_ext': build_ext}
 
@@ -184,7 +126,7 @@ else:
     source_pattern = "pysam/libc%s.c"
 
 # Exit if there are no pre-compiled files and no cython available
-fn = source_pattern % "htslib"
+fn = source_pattern % "tabix"
 if not os.path.exists(fn):
     raise ValueError(
         "no cython installed, but can not find {}."
@@ -192,128 +134,14 @@ if not os.path.exists(fn):
         "from the repository"
         .format(fn))
 
-# exclude sources that contain a main function
-EXCLUDE = {
-    "samtools": (
-    ),
-    "bcftools": (
-        "test", "plugins", "peakfit.c",
-        "peakfit.h",
-        # needs to renamed, name conflict with samtools reheader
-        "reheader.c",
-        "polysomy.c"),
-    "htslib": (
-        'htslib/tabix.c',
-        'htslib/bgzip.c',
-        'htslib/htsfile.c'),
-}
-
-print ("# pysam: htslib mode is {}".format(HTSLIB_MODE))
-print ("# pysam: HTSLIB_CONFIGURE_OPTIONS={}".format(
-    HTSLIB_CONFIGURE_OPTIONS))
-htslib_configure_options = None
-
-if HTSLIB_MODE in ['shared', 'separate']:
-    package_list += ['pysam.include.htslib',
-                     'pysam.include.htslib.htslib']
-    package_dirs.update({'pysam.include.htslib':'htslib'})
-
-    htslib_configure_options = configure_library(
-        "htslib",
-        HTSLIB_CONFIGURE_OPTIONS,
-        ["--enable-libcurl",
-         "--disable-libcurl"])
-
-    HTSLIB_SOURCE = "builtin"
-    print ("# pysam: htslib configure options: {}".format(
-        str(htslib_configure_options)))
-
-    config_headers += ["htslib/config.h"]
-    if htslib_configure_options is None:
-        # create empty config.h file
-        with open("htslib/config.h", "w") as outf:
-            outf.write(
-                "/* empty config.h created by pysam */\n")
-            outf.write(
-                "/* conservative compilation options */\n")
-
-    with changedir("htslib"):
-        htslib_make_options = run_make_print_config()
-
-    for key, value in htslib_make_options.items():
-        print ("# pysam: htslib_config {}={}".format(key, value))
-
-    external_htslib_libraries = ['z']
-    if "LIBS" in htslib_make_options:
-        external_htslib_libraries.extend(
-            [re.sub("^-l", "", x) for x in htslib_make_options["LIBS"].split(" ") if x.strip()])
-
-    shared_htslib_sources = [re.sub("\.o", ".c", os.path.join("htslib", x))
-                             for x in
-                             htslib_make_options["LIBHTS_OBJS"].split(" ")]
-
-    htslib_sources = []
-
-if HTSLIB_LIBRARY_DIR:
-    # linking against a shared, externally installed htslib version, no
-    # sources required for htslib
-    htslib_sources = []
-    shared_htslib_sources = []
-    chtslib_sources = []
-    htslib_library_dirs = [HTSLIB_LIBRARY_DIR]
-    htslib_include_dirs = [HTSLIB_INCLUDE_DIR]
-    external_htslib_libraries = ['z', 'hts']
-elif HTSLIB_MODE == 'separate':
-    # add to each pysam component a separately compiled
-    # htslib
-    htslib_sources = shared_htslib_sources
-    shared_htslib_sources = htslib_sources
-    htslib_library_dirs = []
-    htslib_include_dirs = ['htslib']
-elif HTSLIB_MODE == 'shared':
-    # link each pysam component against the same
-    # htslib built from sources included in the pysam
-    # package.
-    htslib_library_dirs = [
-        "pysam",  # when using setup.py develop?
-        ".",  # when using setup.py develop?
-        os.path.join("build", distutils_dir_name("lib"), "pysam")]
-
-    htslib_include_dirs = ['htslib']
-else:
-    raise ValueError("unknown HTSLIB value '%s'" % HTSLIB_MODE)
-
-# build config.py
-with open(os.path.join("pysam", "config.py"), "w") as outf:
-    outf.write('HTSLIB = "{}"\n'.format(HTSLIB_SOURCE))
-    config_values = collections.defaultdict(int)
-
-    if HTSLIB_SOURCE == "builtin":
-        with open(os.path.join("htslib", "config.h")) as inf:
-            for line in inf:
-                if line.startswith("#define"):
-                    key, value = re.match(
-                        "#define (\S+)\s+(\S+)", line).groups()
-                    config_values[key] = value
-            for key in ["ENABLE_PLUGINS",
-                        "HAVE_COMMONCRYPTO",
-                        "HAVE_GMTIME_R",
-                        "HAVE_HMAC",
-                        "HAVE_IRODS",
-                        "HAVE_LIBCURL",
-                        "HAVE_MMAP"]:
-                outf.write("{} = {}\n".format(key, config_values[key]))
-                print ("# pysam: config_option: {}={}".format(key, config_values[key]))
-
-# create empty config.h files if they have not been created automatically
-# or created by the user:
-for fn in config_headers:
-    if not os.path.exists(fn):
-        with open(fn, "w") as outf:
-            outf.write(
-                "/* empty config.h created by pysam */\n")
-            outf.write(
-                "/* conservative compilation options */\n")
+# linking against a shared, externally installed htslib version, no
+# sources required for htslib
+htslib_sources = []
+shared_htslib_sources = []
+chtslib_sources = []
+htslib_library_dirs = [HTSLIB_LIBRARY_DIR]
+htslib_include_dirs = [HTSLIB_INCLUDE_DIR]
+external_htslib_libraries = ['z', 'hts']
 
 #######################################################
 # Windows compatibility - untested
@@ -340,16 +168,11 @@ suffix = sysconfig.get_config_var('EXT_SUFFIX')
 if not suffix:
     suffix = sysconfig.get_config_var('SO')
 
-internal_htslib_libraries = [
-    os.path.splitext("chtslib{}".format(suffix))[0]]
-internal_samtools_libraries = [
-    os.path.splitext("csamtools{}".format(suffix))[0],
-    os.path.splitext("cbcftools{}".format(suffix))[0],
-    ]
 internal_pysamutil_libraries = [
+    os.path.splitext("chtslib{}".format(suffix))[0],
     os.path.splitext("cutils{}".format(suffix))[0]]
 
-libraries_for_pysam_module = external_htslib_libraries + internal_htslib_libraries + internal_pysamutil_libraries
+libraries_for_pysam_module = external_htslib_libraries + internal_pysamutil_libraries
 
 # Order of modules matters in order to make sure that dependencies are resolved.
 # The structures of dependencies is as follows:
@@ -366,16 +189,9 @@ modules = [
     dict(name="pysam.libchtslib",
          sources=[source_pattern % "htslib", "pysam/htslib_util.c"] + shared_htslib_sources + os_c_files,
          libraries=external_htslib_libraries),
-    dict(name="pysam.libcsamtools",
-         sources=[source_pattern % "samtools"] + glob.glob(os.path.join("samtools", "*.pysam.c")) +
-         [os.path.join("samtools", "lz4", "lz4.c")] + htslib_sources + os_c_files,
-         libraries=external_htslib_libraries + internal_htslib_libraries),
-    dict(name="pysam.libcbcftools",
-         sources=[source_pattern % "bcftools"] + glob.glob(os.path.join("bcftools", "*.pysam.c")) + htslib_sources + os_c_files,
-         libraries=external_htslib_libraries + internal_htslib_libraries),
     dict(name="pysam.libcutils",
          sources=[source_pattern % "utils", "pysam/pysam_util.c"] + htslib_sources + os_c_files,
-         libraries=external_htslib_libraries + internal_htslib_libraries + internal_samtools_libraries),
+         libraries=external_htslib_libraries),
     dict(name="pysam.libcalignmentfile",
          sources=[source_pattern % "alignmentfile"] + htslib_sources + os_c_files,
          libraries=libraries_for_pysam_module),

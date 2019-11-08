@@ -1021,7 +1021,7 @@ class TestRemoteFileHTTP(unittest.TestCase):
     local = os.path.join(TABIX_DATADIR, "example.gtf.gz")
 
     def setUp(self):
-        if not pysam.config.HAVE_LIBCURL or not check_url(self.url):
+        if not check_url(self.url):
             self.remote_file = None
         else:
             self.remote_file = pysam.TabixFile(self.url, "r")
@@ -1060,7 +1060,7 @@ class TestRemoteFileHTTPWithHeader(TestRemoteFileHTTP):
     local = os.path.join(TABIX_DATADIR, "example_comments.gtf.gz")
 
     def setUp(self):
-        if not pysam.config.HAVE_LIBCURL or not check_url(self.url):
+        if not check_url(self.url):
             self.remote_file = None
         else:
             self.remote_file = pysam.TabixFile(self.url, "r")

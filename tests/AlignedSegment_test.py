@@ -7,7 +7,7 @@ import string
 import copy
 import array
 
-from TestUtils import checkFieldEqual, BAM_DATADIR, get_temp_filename, get_temp_context, IS_PYTHON3
+from TestUtils import checkFieldEqual, BAM_DATADIR, get_temp_filename, get_temp_context, IS_PYTHON3, samtools_view
 
 
 if IS_PYTHON3:
@@ -1324,7 +1324,7 @@ class TestBuildingReadsWithoutHeader(unittest.TestCase):
             read.reference_id = 2
             outf.write(read)
 
-        stdout = pysam.samtools.view(tmpfilename)
+        stdout = samtools_view(tmpfilename)
         chromosome = stdout.split("\t")[2]
         self.assertEqual(chromosome, "chr3")
         os.unlink(tmpfilename)

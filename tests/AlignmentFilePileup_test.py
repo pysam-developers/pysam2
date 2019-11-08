@@ -2,7 +2,8 @@
 import os
 import pysam
 import unittest
-from TestUtils import BAM_DATADIR, IS_PYTHON3, force_str, flatten_nested_list
+from TestUtils import BAM_DATADIR, IS_PYTHON3, force_str, flatten_nested_list, \
+    samtools_mpileup
 import PileupTestUtils
 
 
@@ -35,7 +36,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_samtools_stepper(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 self.samfilename)).splitlines(True)
         iterator = self.samfile.pileup(
@@ -45,7 +46,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_all_stepper(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 "-A", "-B",
                 self.samfilename)).splitlines(True)
@@ -57,7 +58,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_ignore_overlaps(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 "-A", "-B", "-x",
                 self.samfilename)).splitlines(True)
@@ -70,7 +71,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_samtools_stepper_mapping_quality_threshold(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 "--min-MQ", "15",
                 self.samfilename)).splitlines(True)
@@ -82,7 +83,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_samtools_stepper_base_quality_threshold(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 "--min-BQ", "20",
                 self.samfilename)).splitlines(True)
@@ -94,7 +95,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_samtools_stepper_ignore_orphans(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 "--count-orphans",
                 self.samfilename)).splitlines(True)
@@ -106,7 +107,7 @@ class TestPileupReadSelection(unittest.TestCase):
 
     def test_samtools_stepper_redo_baq(self):
         refs = force_str(
-            pysam.samtools.mpileup(
+            samtools_mpileup(
                 "-f", self.fastafilename,
                 "--redo-BAQ",
                 self.samfilename)).splitlines(True)

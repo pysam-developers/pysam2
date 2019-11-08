@@ -3,8 +3,6 @@ import sys
 import sysconfig
 
 from pysam.libchtslib import *
-from pysam.libcsamtools import *
-from pysam.libcbcftools import *
 from pysam.libcutils import *
 import pysam.libcutils as libcutils
 import pysam.libcfaidx as libcfaidx
@@ -25,10 +23,7 @@ import pysam.libcbcf as libcbcf
 from pysam.libcbcf import *
 import pysam.libcbgzf as libcbgzf
 from pysam.libcbgzf import *
-from pysam.utils import SamtoolsError
 import pysam.Pileup as Pileup
-from pysam.samtools import *
-import pysam.config
 
 
 # export all the symbols from separate modules
@@ -43,35 +38,16 @@ __all__ = \
     libctabixproxies.__all__ +\
     libcalignmentfile.__all__ +\
     libcalignedsegment.__all__ +\
-    libcsamfile.__all__ +\
-    ["SamtoolsError"] +\
-    ["Pileup"]
+    libcsamfile.__all__
 
-from pysam.version import __version__, __samtools_version__
+
+from pysam.version import __version__
 
 
 def get_include():
     '''return a list of include directories.'''
     dirname = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-
-    #
-    # Header files may be stored in different relative locations
-    # depending on installation mode (e.g., `python setup.py install`,
-    # `python setup.py develop`. The first entry in each list is
-    # where develop-mode headers can be found.
-    #
-    htslib_possibilities = [os.path.join(dirname, '..', 'htslib'),
-                            os.path.join(dirname, 'include', 'htslib')]
-    samtool_possibilities = [os.path.join(dirname, '..', 'samtools'),
-                             os.path.join(dirname, 'include', 'samtools')]
-
     includes = [dirname]
-    for header_locations in [htslib_possibilities, samtool_possibilities]:
-        for header_location in header_locations:
-            if os.path.exists(header_location):
-                includes.append(os.path.abspath(header_location))
-                break
-
     return includes
 
 
@@ -92,9 +68,8 @@ def get_libraries():
                   'libcsamfile',
                   'libcvcf',
                   'libcbcf',
+                  'libchtslib',
                   'libctabix']
-    if pysam.config.HTSLIB == "builtin":
-        pysam_libs.append('libchtslib')
 
     so = sysconfig.get_config_var('SO')
     return [os.path.join(dirname, x + so) for x in pysam_libs]

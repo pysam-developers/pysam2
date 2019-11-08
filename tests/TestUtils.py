@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 import difflib
+import subprocess
 import gzip
 import contextlib
 import inspect
@@ -108,6 +109,16 @@ def checkGZBinaryEqual(filename1, filename2):
             return True
     return False
 
+def samtools_view(*args):
+    return subprocess.check_output(
+        ["samtools", "view"] + list(args)).decode("utf-8")
+
+
+def samtools_mpileup(*args):
+    return subprocess.check_output(
+        ["samtools", "mpileup"] + list(args)).decode("utf-8")
+
+
 
 def check_samtools_view_equal(
         filename1, filename2,
@@ -120,8 +131,8 @@ def check_samtools_view_equal(
     if not without_header:
         args.append("-h")
 
-    lines1 = pysam.samtools.view(*(args + [filename1]))
-    lines2 = pysam.samtools.view(*(args + [filename2]))
+    lines1 = samtools_view(*(args + [filename1]))
+    lines2 = samtools_view(*(args + [filename2]))
 
     if len(lines1) != len(lines2):
         return False

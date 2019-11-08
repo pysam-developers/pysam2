@@ -21,10 +21,9 @@ else:
 from functools import partial
 
 import pysam
-import pysam.samtools
 from TestUtils import checkBinaryEqual, checkGZBinaryEqual, check_url, \
     check_samtools_view_equal, checkFieldEqual, force_str, \
-    get_temp_filename, BAM_DATADIR
+    get_temp_filename, BAM_DATADIR, samtools_view
 
 
 ##################################################
@@ -911,10 +910,9 @@ class TestIteratorRowBAM(unittest.TestCase):
         '''compare results from iterator with those from samtools.'''
         ps = list(self.samfile.fetch(region=rnge))
         sa = force_str(
-            pysam.samtools.view(
+            samtools_view(
                 self.filename,
-                rnge,
-                raw=True)).splitlines(True)
+                rnge)).splitlines(True)
         self.assertEqual(
             len(ps), len(sa),
             "unequal number of results for range %s: %i != %i" %
@@ -968,8 +966,7 @@ class TestIteratorRowAllBAM(unittest.TestCase):
     def testIterate(self):
         '''compare results from iterator with those from samtools.'''
         ps = list(self.samfile.fetch())
-        sa = pysam.samtools.view(self.filename,
-                                 raw=True).splitlines()
+        sa = samtools_view(self.filename).splitlines()
         self.assertEqual(
             len(ps), len(sa),
             "unequal number of results: %i != %i" %
@@ -1648,7 +1645,7 @@ class TestRemoteFileFTP(unittest.TestCase):
         if not check_url(self.url):
             return
 
-        result = pysam.samtools.view(self.url, self.region)
+        result = samtools_view(self.url, self.region)
         self.assertEqual(len(result), 36)
 
     def testFTPFetch(self):
@@ -1674,7 +1671,7 @@ class TestRemoteFileHTTP(unittest.TestCase):
         samfile_local = pysam.AlignmentFile(self.local, "rb")
         ref = list(samfile_local.fetch(region=self.region))
 
-        result = pysam.samtools.view(self.url, self.region)
+        result = samtools_view(self.url, self.region)
         self.assertEqual(len(result.splitlines()), len(ref))
 
     def testFetch(self):
@@ -1779,7 +1776,7 @@ class TestCountCoverage(unittest.TestCase):
                     if ii % 7 == 0:
                         read.flag = read.flag | 0x400
                     outf.write(read)
-        pysam.samtools.index(self.tmpfilename)
+        pysam.AlignmentFile.index(self.tmpfilename)
 
     def tearDown(self):
         self.fastafile.close()
@@ -1967,7 +1964,7 @@ class TestCountCoverage(unittest.TestCase):
                         read.flag = read.flag | 0x400
                     outf.write(read)
         
-        pysam.samtools.index(self.tmpfilename)
+        pysam.AlignmentFile.index(self.tmpfilename)
         chr = 'chr1'
         start = 0
         stop = 1000
@@ -2221,25 +2218,6 @@ class TestMappedUnmapped(unittest.TestCase):
                 self.assertEqual(cc.mapped, mapped_flag)
                 self.assertEqual(cc.unmapped, unmapped_flag)
                 self.assertEqual(cc.total, mapped_flag + unmapped_flag)
-
-
-class TestSamtoolsProxy(unittest.TestCase):
-
-    '''tests for sanity checking access to samtools functions.'''
-
-    def testIndex(self):
-        self.assertRaises(IOError, pysam.samtools.index, "missing_file")
-
-    def testView(self):
-        # note that view still echos "open: No such file or directory"
-        self.assertRaises(pysam.SamtoolsError,
-                          pysam.samtools.view,
-                          "missing_file")
-
-    def testSort(self):
-        self.assertRaises(pysam.SamtoolsError,
-                          pysam.samtools.sort,
-                          "missing_file")
 
 
 class TestAlignmentFileIndex(unittest.TestCase):

@@ -1107,6 +1107,13 @@ cdef extern from "htslib/sam.h" nogil:
     # @return  0 if successful, or negative if an error occurred.
     int sam_index_build2(const char *fn, const char *fnidx, int min_shift)
 
+    # Generate and save an index to a specific file
+    # @param fn        Input BAM/CRAM/etc filename
+    # @param fnidx     Output filename, or NULL to add .bai/.csi/etc to @a fn
+    # @param min_shift Positive to generate CSI, or 0 to generate BAI
+    # @return  0 if successful, or negative if an error occurred.
+    int sam_index_build3(const char *fn, const char *fnidx, int min_shift, int nthreads)
+
     void sam_itr_destroy(hts_itr_t *iter)
     hts_itr_t *sam_itr_queryi(const hts_idx_t *idx, int tid, int beg, int end)
     hts_itr_t *sam_itr_querys(const hts_idx_t *idx, bam_hdr_t *hdr, const char *region)
