@@ -7,6 +7,9 @@ import gzip
 import contextlib
 import inspect
 import tempfile
+from itertools import zip_longest
+from urllib.request import urlopen
+
 import pysam
 
 WORKDIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -28,34 +31,16 @@ LINKDIR = os.path.abspath(os.path.join(
 TESTS_TEMPDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "tmp"))
 
 
-IS_PYTHON3 = sys.version_info[0] >= 3
-
-
-if IS_PYTHON3:
-    from itertools import zip_longest
-    from urllib.request import urlopen
-else:
-    from itertools import izip as zip_longest
-    from urllib2 import urlopen
-
-
-if IS_PYTHON3:
-    def force_str(s):
-        try:
-            return s.decode('ascii')
-        except AttributeError:
-            return s
-
-    def force_bytes(s):
-        try:
-            return s.encode('ascii')
-        except AttributeError:
-            return s
-else:
-    def force_str(s):
+def force_str(s):
+    try:
+        return s.decode('ascii')
+    except AttributeError:
         return s
 
-    def force_bytes(s):
+def force_bytes(s):
+    try:
+        return s.encode('ascii')
+    except AttributeError:
         return s
 
 

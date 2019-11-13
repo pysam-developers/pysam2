@@ -2,7 +2,7 @@
 import os
 import pysam
 import unittest
-from TestUtils import BAM_DATADIR, IS_PYTHON3, force_str, flatten_nested_list, \
+from TestUtils import BAM_DATADIR, force_str, flatten_nested_list, \
     samtools_mpileup
 import PileupTestUtils
 
@@ -348,8 +348,6 @@ class TestIteratorColumn2(unittest.TestCase):
         self.assertEqual(len(s.split("\n")), 2)
 
 
-@unittest.skipIf(not IS_PYTHON3,
-                 "tests requires at least python3 for subprocess context manager")
 class PileUpColumnTests(unittest.TestCase):
 
     fn = os.path.join(BAM_DATADIR, "ex2.bam")
