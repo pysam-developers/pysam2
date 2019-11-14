@@ -15,11 +15,6 @@
 # class FastqProxy
 # class FastxRecord
 #
-# For backwards compatibility, the following classes are also defined:
-#
-# class Fastafile   equivalent to FastaFile
-# class FastqFile   equivalent to FastxFile
-#
 ###############################################################################
 #
 # The MIT License
@@ -393,10 +388,6 @@ cdef class FastqProxy:
             return "@%s%s\n%s\n+\n%s" % (self.name, comment,
                                          self.sequence, self.quality)
     
-    cdef cython.str tostring(self):
-        """deprecated : use :meth:`to_string`"""
-        return self.to_string()
-    
     def __str__(self):
         return self.to_string()
 
@@ -455,10 +446,6 @@ cdef class FastxRecord:
             return "@%s%s\n%s\n+\n%s" % (self.name, comment,
                                          self.sequence, self.quality)
         
-    cdef cython.str tostring(self):
-        """deprecated : use :meth:`to_string`"""
-        return self.to_string()
-
     def set_name(self, name):
         if name is None:
             raise ValueError("FastxRecord must have a name and not None")
@@ -516,10 +503,6 @@ cdef class FastxFile:
         iteration. If set to False, no copy will be made. This will
         permit much faster iteration, but an entry will not persist
         when the iteration continues and an entry is read-only.
-
-    Notes
-    -----
-    Prior to version 0.8.2, this class was called FastqFile.
 
     Raises
     ------
@@ -653,19 +636,8 @@ cdef class FastxFile:
             raise ValueError('unknown problem parsing {0}'
                              .format(self._filename))
 
-# Compatibility Layer for pysam 0.8.1
-cdef class FastqFile(FastxFile):
-    """FastqFile is deprecated: use FastxFile instead"""
-    pass
-
-# Compatibility Layer for pysam < 0.8
-cdef class Fastafile(FastaFile):
-    """Fastafile is deprecated: use FastaFile instead"""
-    pass
 
 __all__ = ["FastaFile",
-           "FastqFile",
            "FastxFile",
-           "Fastafile",
            "FastxRecord",
            "FastqProxy"]

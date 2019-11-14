@@ -176,21 +176,21 @@ class BasicTestBAMFromFetch(unittest.TestCase):
 
     def testPresentOptionalFields(self):
         self.assertEqual(
-            self.reads[0].opt('NM'), 1,
+            self.reads[0].get_tag('NM'), 1,
             "optional field mismatch in read 1, NM: %s != %s" %
-            (self.reads[0].opt('NM'), 1))
+            (self.reads[0].get_tag('NM'), 1))
         self.assertEqual(
-            self.reads[0].opt('RG'), 'L1',
+            self.reads[0].get_tag('RG'), 'L1',
             "optional field mismatch in read 1, RG: %s != %s" %
-            (self.reads[0].opt('RG'), 'L1'))
+            (self.reads[0].get_tag('RG'), 'L1'))
         self.assertEqual(
-            self.reads[1].opt('RG'), 'L2',
+            self.reads[1].get_tag('RG'), 'L2',
             "optional field mismatch in read 2, RG: %s != %s" %
-            (self.reads[1].opt('RG'), 'L2'))
+            (self.reads[1].get_tag('RG'), 'L2'))
         self.assertEqual(
-            self.reads[1].opt('MF'), 18,
+            self.reads[1].get_tag('MF'), 18,
             "optional field mismatch in read 2, MF: %s != %s" %
-            (self.reads[1].opt('MF'), 18))
+            (self.reads[1].get_tag('MF'), 18))
 
     def testPairedBools(self):
         self.assertEqual(self.reads[0].is_paired, True, "is paired mismatch in read 1: %s != %s" % (
@@ -203,16 +203,16 @@ class BasicTestBAMFromFetch(unittest.TestCase):
             self.reads[1].is_proper_pair, True))
 
     def testTags(self):
-        self.assertEqual(self.reads[0].tags,
+        self.assertEqual(self.reads[0].get_tags(),
                          [('NM', 1), ('RG', 'L1'),
                           ('PG', 'P1'), ('XT', 'U')])
-        self.assertEqual(self.reads[1].tags,
+        self.assertEqual(self.reads[1].get_tags(),
                          [('MF', 18), ('RG', 'L2'),
                           ('PG', 'P2'), ('XT', 'R')])
 
     def testOpt(self):
-        self.assertEqual(self.reads[0].opt("XT"), "U")
-        self.assertEqual(self.reads[1].opt("XT"), "R")
+        self.assertEqual(self.reads[0].get_tag("XT"), "U")
+        self.assertEqual(self.reads[1].get_tag("XT"), "R")
 
 
 class BasicTestSAMFromFetch(BasicTestBAMFromFetch):
@@ -234,7 +234,7 @@ class BasicTestCRAMFromFetch(BasicTestBAMFromFetch):
 
     def testTags(self):
         self.assertEqual(
-            sorted(self.reads[0].tags),
+            sorted(self.reads[0].get_tags()),
             sorted([('RG', 'L1'),
                     ('NM', 22),
                     ('MD', '0C0T1G1C0C0A1G0^G0C1C1G1A0T2G0G0G0A1C1G1G1A2C0'),
@@ -242,7 +242,7 @@ class BasicTestCRAMFromFetch(BasicTestBAMFromFetch):
                     ('XT', 'U'),
                     ]))
         self.assertEqual(
-            sorted(self.reads[1].tags),
+            sorted(self.reads[1].get_tags()),
             sorted([('RG', 'L2'),
                     ('NM', 26),
                     ('MD',
@@ -253,21 +253,21 @@ class BasicTestCRAMFromFetch(BasicTestBAMFromFetch):
 
     def testPresentOptionalFields(self):
         self.assertEqual(
-            self.reads[0].opt('NM'), 22,
+            self.reads[0].get_tag('NM'), 22,
             "optional field mismatch in read 1, NM: %s != %s" %
-            (self.reads[0].opt('NM'), 22))
+            (self.reads[0].get_tag('NM'), 22))
         self.assertEqual(
-            self.reads[0].opt('RG'), 'L1',
+            self.reads[0].get_tag('RG'), 'L1',
             "optional field mismatch in read 1, RG: %s != %s" %
-            (self.reads[0].opt('RG'), 'L1'))
+            (self.reads[0].get_tag('RG'), 'L1'))
         self.assertEqual(
-            self.reads[1].opt('RG'), 'L2',
+            self.reads[1].get_tag('RG'), 'L2',
             "optional field mismatch in read 2, RG: %s != %s" %
-            (self.reads[1].opt('RG'), 'L2'))
+            (self.reads[1].get_tag('RG'), 'L2'))
         self.assertEqual(
-            self.reads[1].opt('MF'), 18,
+            self.reads[1].get_tag('MF'), 18,
             "optional field mismatch in read 2, MF: %s != %s" %
-            (self.reads[1].opt('MF'), 18))
+            (self.reads[1].get_tag('MF'), 18))
 
 
 class BasicTestSAMFromFilename(BasicTestBAMFromFetch):
@@ -685,7 +685,7 @@ class TestIO(unittest.TestCase):
             
         self.assertRaises(ValueError, samfile.fetch, 'chr1', 100, 120)
         self.assertRaises(ValueError, samfile.pileup, 'chr1', 100, 120)
-        self.assertRaises(ValueError, samfile.getrname, 0)
+        self.assertRaises(ValueError, samfile.get_reference_name, 0)
         # TODO
         self.assertRaises(ValueError, samfile.tell)
         self.assertRaises(ValueError, samfile.seek, 0)
@@ -1012,8 +1012,8 @@ class TestFloatTagBug(unittest.TestCase):
         '''
         samfile = pysam.AlignmentFile(os.path.join(BAM_DATADIR, "tag_bug.bam"))
         read = next(samfile.fetch(until_eof=True))
-        self.assertTrue(('XC', 1) in read.tags)
-        self.assertEqual(read.opt('XC'), 1)
+        self.assertTrue(('XC', 1) in read.get_tags())
+        self.assertEqual(read.get_tag('XC'), 1)
 
 
 class TestLargeFieldBug(unittest.TestCase):
@@ -1029,8 +1029,8 @@ class TestLargeFieldBug(unittest.TestCase):
             os.path.join(BAM_DATADIR, "issue100.bam"))
         read = next(samfile.fetch(until_eof=True))
         new_read = pysam.AlignedSegment()
-        new_read.tags = read.tags
-        self.assertEqual(new_read.tags, read.tags)
+        new_read.set_tags(read.get_tags())
+        self.assertEqual(new_read.get_tags(), read.get_tags())
 
 
 class TestClipping(unittest.TestCase):
@@ -1304,8 +1304,8 @@ class TestDeNovoConstruction(unittest.TestCase):
         a.template_length = 167
         a.query_qualities = pysam.qualitystring_to_array(
             "<<<<<<<<<<<<<<<<<<<<<:<9/,&,22;;<<<")
-        a.tags = (("NM", 1),
-                  ("RG", "L1"))
+        a.set_tags((("NM", 1),
+                    ("RG", "L1")))
 
         b = pysam.AlignedSegment(header)
         b.query_name = "read_28701_28881_323b"
@@ -1320,8 +1320,8 @@ class TestDeNovoConstruction(unittest.TestCase):
         b.template_length = 412
         b.query_qualities = pysam.qualitystring_to_array(
             "<<<<<;<<<<7;:<<<6;<<<<<<<<<<<<7<<<<")
-        b.tags = (("MF", 18),
-                  ("RG", "L2"))
+        b.set_tags((("MF", 18),
+                    ("RG", "L2")))
 
         self.reads = (a, b)
 
@@ -1526,13 +1526,13 @@ class TestBTagSam(unittest.TestCase):
 
         s = pysam.AlignmentFile(self.filename)
         for x, read in enumerate(s):
-            tags = read.tags
+            tags = read.get_tags()
             if x == 0:
                 self.assertEqual(tags, self.read0)
 
             fz = list(dict(tags)["FZ"])
             self.assertEqual(fz, self.compare[x])
-            self.assertEqual(list(read.opt("FZ")), self.compare[x])
+            self.assertEqual(list(read.get_tag("FZ")), self.compare[x])
             self.assertEqual(tags, read.get_tags())
             for tag, value in tags:
                 self.assertEqual(value, read.get_tag(tag))
@@ -1541,12 +1541,12 @@ class TestBTagSam(unittest.TestCase):
 
         s = pysam.AlignmentFile(self.filename)
         for read in s:
-            before = read.tags
-            read.tags = before
-            self.assertEqual(read.tags, before)
+            before = read.get_tags()
+            read.set_tags(before)
+            self.assertEqual(read.get_tags(), before)
 
             read.set_tags(before)
-            self.assertEqual(read.tags, before)
+            self.assertEqual(read.get_tags(), before)
 
             for tag, value in before:
                 read.set_tag(tag, value)
@@ -1713,28 +1713,28 @@ class TestLargeOptValues(unittest.TestCase):
         i = samfile.fetch()
         for exp in self.ints:
             rr = next(i)
-            obs = rr.opt("ZP")
+            obs = rr.get_tag("ZP")
             self.assertEqual(exp, obs,
                              "expected %s, got %s\n%s" %
                              (str(exp), str(obs), str(rr)))
 
         for exp in [-x for x in self.ints]:
             rr = next(i)
-            obs = rr.opt("ZP")
+            obs = rr.get_tag("ZP")
             self.assertEqual(exp, obs,
                              "expected %s, got %s\n%s" %
                              (str(exp), str(obs), str(rr)))
 
         for exp in self.floats:
             rr = next(i)
-            obs = rr.opt("ZP")
+            obs = rr.get_tag("ZP")
             self.assertEqual(exp, obs,
                              "expected %s, got %s\n%s" %
                              (str(exp), str(obs), str(rr)))
 
         for exp in [-x for x in self.floats]:
             rr = next(i)
-            obs = rr.opt("ZP")
+            obs = rr.get_tag("ZP")
             self.assertEqual(exp, obs, "expected %s, got %s\n%s" %
                              (str(exp), str(obs), str(rr)))
 
@@ -1758,7 +1758,7 @@ class TestCountCoverage(unittest.TestCase):
 
     def setUp(self):
 
-        self.fastafile = pysam.Fastafile(self.fastafilename)
+        self.fastafile = pysam.FastaFile(self.fastafilename)
         self.tmpfilename = get_temp_filename(".bam")
 
         with pysam.AlignmentFile(self.samfilename) as inf:
@@ -1805,7 +1805,7 @@ class TestCountCoverage(unittest.TestCase):
                     try:
                         if read.alignment.query_qualities[read.query_position] \
                            >= quality_threshold:
-                            letter = read.alignment.query[read.query_position]
+                            letter = read.alignment.query_sequence[read.query_position]
                             if letter == 'A':
                                 count_a[rpos] += 1
                             elif letter == 'C':

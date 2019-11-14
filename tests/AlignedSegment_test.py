@@ -51,7 +51,7 @@ class TestAlignedSegment(ReadTest):
         self.assertEqual(a.reference_id, -1)
         self.assertEqual(a.mapping_quality, 0)
         self.assertEqual(a.cigartuples, None)
-        self.assertEqual(a.tags, [])
+        self.assertEqual(a.get_tags(), [])
         self.assertEqual(a.next_reference_id, -1)
         self.assertEqual(a.next_reference_start, -1)
         self.assertEqual(a.template_length, 0)
@@ -66,9 +66,9 @@ class TestAlignedSegment(ReadTest):
     def testSettingTagInEmptyRead(self):
         '''see issue 62'''
         a = pysam.AlignedSegment()
-        a.tags = (("NM", 1),)
+        a.set_tags((("NM", 1),))
         a.query_qualities = None
-        self.assertEqual(a.tags, [("NM", 1), ])
+        self.assertEqual(a.get_tags(), [("NM", 1), ])
 
     def testCompare(self):
         '''check comparison functions.'''
@@ -82,7 +82,7 @@ class TestAlignedSegment(ReadTest):
         self.assertFalse(a != b)
         self.assertFalse(b != a)
 
-        b.tid = 1
+        b.reference_id = 1
         self.assertFalse(a == b)
         self.assertFalse(b == a)
         self.assertTrue(a != b)
@@ -92,7 +92,7 @@ class TestAlignedSegment(ReadTest):
         a = self.build_read()
         b = self.build_read()
         self.assertEqual(hash(a), hash(b))
-        b.tid = 1
+        b.reference_id = 1
         self.assertNotEqual(hash(a), hash(b))
 
     def testUpdate(self):
@@ -225,7 +225,7 @@ class TestAlignedSegment(ReadTest):
     def testFullReferencePositions(self):
         '''see issue 26'''
         a = self.build_read()
-        a.cigar = [(4, 30), (0, 20), (1, 3), (0, 47)]
+        a.cigartuples = [(4, 30), (0, 20), (1, 3), (0, 47)]
 
         self.assertEqual(100,
                          len(a.get_reference_positions(full_length=True)))
@@ -235,29 +235,29 @@ class TestAlignedSegment(ReadTest):
         self.assertEqual(a.get_blocks(),
                          [(20, 30), (31, 40), (40, 60)])
 
-    def test_infer_query_length(self):
-        '''Test infer_query_length on M|=|X|I|D|H|S cigar ops'''
+    def test_infer_read_length(self):
+        '''Test infer_read_length on M|=|X|I|D|H|S cigar ops'''
         a = self.build_read()
         a.cigarstring = '40M'
-        self.assertEqual(a.infer_query_length(), 40)
+        self.assertEqual(a.infer_read_length(), 40)
         a.cigarstring = '40='
-        self.assertEqual(a.infer_query_length(), 40)
+        self.assertEqual(a.infer_read_length(), 40)
         a.cigarstring = '40X'
-        self.assertEqual(a.infer_query_length(), 40)
+        self.assertEqual(a.infer_read_length(), 40)
         a.cigarstring = '20M5I20M'
-        self.assertEqual(a.infer_query_length(), 45)
+        self.assertEqual(a.infer_read_length(), 45)
         a.cigarstring = '20M5D20M'
-        self.assertEqual(a.infer_query_length(), 40)
+        self.assertEqual(a.infer_read_length(), 40)
         a.cigarstring = '5H35M'
-        self.assertEqual(a.infer_query_length(), 35)
+        self.assertEqual(a.infer_read_length(), 35)
         a.cigarstring = '5S35M'
-        self.assertEqual(a.infer_query_length(), 40)
+        self.assertEqual(a.infer_read_length(), 40)
         a.cigarstring = '35M5H'
-        self.assertEqual(a.infer_query_length(), 35)
+        self.assertEqual(a.infer_read_length(), 35)
         a.cigarstring = '35M5S'
-        self.assertEqual(a.infer_query_length(), 40)
+        self.assertEqual(a.infer_read_length(), 40)
         a.cigarstring = None
-        self.assertEqual(a.infer_query_length(), None)
+        self.assertEqual(a.infer_read_length(), None)
 
     def test_infer_read_length(self):
         '''Test infer_read_length on M|=|X|I|D|H|S cigar ops'''
@@ -543,7 +543,7 @@ class TestAlignedSegment(ReadTest):
 
     def test_bin_values_for_mapped_reads_are_updated(self):
         a = self.build_read()
-        a.pos = 20000
+        a.reference_start = 20000
         self.assertFalse(a.is_unmapped)
         self.assertEqual(a.bin, 4682)
 
@@ -827,21 +827,21 @@ class TestTags(ReadTest):
 
     def testAddTagsType(self):
         a = self.build_read()
-        a.tags = None
-        self.assertEqual(a.tags, [])
+        a.set_tags(None)
+        self.assertEqual(a.get_tags(), [])
 
-        a.setTag('X1', 5.0)
-        a.setTag('X2', "5.0")
-        a.setTag('X3', 5)
+        a.set_tag('X1', 5.0)
+        a.set_tag('X2', "5.0")
+        a.set_tag('X3', 5)
 
-        self.assertEqual(sorted(a.tags),
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X1', 5.0),
                                  ('X2', "5.0"),
                                  ('X3', 5)]))
 
         # test setting float for int value
-        a.setTag('X4', 5, value_type='d')
-        self.assertEqual(sorted(a.tags),
+        a.set_tag('X4', 5, value_type='d')
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X1', 5.0),
                                  ('X2', "5.0"),
                                  ('X3', 5),
@@ -849,8 +849,8 @@ class TestTags(ReadTest):
 
         # test setting int for float value - the
         # value will be rounded.
-        a.setTag('X5', 5.2, value_type='i')
-        self.assertEqual(sorted(a.tags),
+        a.set_tag('X5', 5.2, value_type='i')
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X1', 5.0),
                                  ('X2', "5.0"),
                                  ('X3', 5),
@@ -862,45 +862,45 @@ class TestTags(ReadTest):
 
     def testTagsUpdatingFloat(self):
         a = self.build_read()
-        a.tags = [('NM', 1), ('RG', 'L1'),
-                  ('PG', 'P1'), ('XT', 'U')]
+        a.set_tags([('NM', 1), ('RG', 'L1'),
+                    ('PG', 'P1'), ('XT', 'U')])
 
-        self.assertEqual(a.tags,
+        self.assertEqual(a.get_tags(),
                          [('NM', 1), ('RG', 'L1'),
                           ('PG', 'P1'), ('XT', 'U')])
-        a.tags += [('XC', 5.0)]
-        self.assertEqual(a.tags,
+        a.set_tags(a.get_tags() + [('XC', 5.0)])
+        self.assertEqual(a.get_tags(),
                          [('NM', 1), ('RG', 'L1'),
                           ('PG', 'P1'), ('XT', 'U'), ('XC', 5.0)])
 
     def testAddTags(self):
         a = self.build_read()
-        a.tags = [('NM', 1), ('RG', 'L1'),
-                  ('PG', 'P1'), ('XT', 'U')]
+        a.set_tags([('NM', 1), ('RG', 'L1'),
+                    ('PG', 'P1'), ('XT', 'U')])
 
-        self.assertEqual(sorted(a.tags),
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('NM', 1), ('RG', 'L1'),
                                  ('PG', 'P1'), ('XT', 'U')]))
 
-        a.setTag('X1', 'C')
-        self.assertEqual(sorted(a.tags),
+        a.set_tag('X1', 'C')
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X1', 'C'), ('NM', 1), ('RG', 'L1'),
                                  ('PG', 'P1'), ('XT', 'U'), ]))
-        a.setTag('X2', 5)
-        self.assertEqual(sorted(a.tags),
+        a.set_tag('X2', 5)
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X2', 5), ('X1', 'C'),
                                  ('NM', 1), ('RG', 'L1'),
                                  ('PG', 'P1'), ('XT', 'U'), ]))
         # add with replacement
-        a.setTag('X2', 10)
-        self.assertEqual(sorted(a.tags),
+        a.set_tag('X2', 10)
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X2', 10), ('X1', 'C'),
                                  ('NM', 1), ('RG', 'L1'),
                                  ('PG', 'P1'), ('XT', 'U'), ]))
 
         # add without replacement
-        a.setTag('X2', 5, replace=False)
-        self.assertEqual(sorted(a.tags),
+        a.set_tag('X2', 5, replace=False)
+        self.assertEqual(sorted(a.get_tags()),
                          sorted([('X2', 10), ('X1', 'C'),
                                  ('X2', 5),
                                  ('NM', 1), ('RG', 'L1'),
@@ -1061,8 +1061,8 @@ class TestTags(ReadTest):
         r = self.build_read()
 
         def c(r, l):
-            r.tags = [('ZM', l)]
-            self.assertEqual(list(r.opt("ZM")), list(l))
+            r.set_tags([('ZM', l)])
+            self.assertEqual(list(r.get_tag("ZM")), list(l))
 
         # signed integers
         c(r, (-1, 1))
@@ -1097,23 +1097,23 @@ class TestTags(ReadTest):
                 ('XO', 1), ('XG', 4), ('MD', '37^ACCC29T18'),
                 ('XA', '5,+11707,36M1I48M,2;21,-48119779,46M1I38M,2;hs37d5,-10060835,40M1D45M,3;5,+11508,36M1I48M,3;hs37d5,+6743812,36M1I48M,3;19,-59118894,46M1I38M,3;4,-191044002,6M1I78M,3;')]  # noqa
 
-        r.tags = tags
-        r.tags += [("RG", rg)] * 100
+        r.set_tags(tags)
+        r.set_tags(r.get_tags() + [("RG", rg)] * 100)
         tags += [("RG", rg)] * 100
 
-        self.assertEqual(tags, r.tags)
+        self.assertEqual(tags, r.get_tags())
 
     def testNegativeIntegers(self):
         x = -2
         aligned_read = self.build_read()
-        aligned_read.tags = [("XD", int(x))]
-        self.assertEqual(aligned_read.opt('XD'), x)
-        # print (aligned_read.tags)
+        aligned_read.set_tags([("XD", int(x))])
+        self.assertEqual(aligned_read.get_tag('XD'), x)
+        # print (aligned_read.get_tags())
 
     def testNegativeIntegersWrittenToFile(self):
         r = self.build_read()
         x = -2
-        r.tags = [("XD", x)]
+        r.set_tags([("XD", x)])
         with get_temp_context("negative_integers.bam") as fn:
             with pysam.AlignmentFile(fn,
                                      "wb",
@@ -1122,7 +1122,7 @@ class TestTags(ReadTest):
                 outf.write(r)
             with pysam.AlignmentFile(fn) as inf:
                 r = next(inf)
-            self.assertEqual(r.tags, [("XD", x)])
+            self.assertEqual(r.get_tags(), [("XD", x)])
 
 
 class TestCopy(ReadTest):
@@ -1359,13 +1359,13 @@ class TestExportImport(ReadTest):
 
     def test_string_export_import_without_tags(self):
         a = self.build_read()
-        a.tags = []
+        a.set_tags([])
         b = pysam.AlignedSegment.fromstring(a.to_string(), a.header)
         self.assertEqual(a, b)
 
     def test_string_export_import_with_tags(self):
         a = self.build_read()
-        a.tags = [("XD", 12), ("RF", "abc")]
+        a.set_tags([("XD", 12), ("RF", "abc")])
         b = pysam.AlignedSegment.fromstring(a.to_string(), a.header)
         self.assertEqual(a, b)
         
@@ -1380,7 +1380,7 @@ class TestExportImport(ReadTest):
                 
     def test_dict_export(self):
         a = self.build_read()
-        a.tags = [("XD", 12), ("RF", "abc")]
+        a.set_tags([("XD", 12), ("RF", "abc")])
         
         self.assertEqual(
             a.to_dict(),
@@ -1393,13 +1393,13 @@ class TestExportImport(ReadTest):
 
     def test_string_export_import_without_tags(self):
         a = self.build_read()
-        a.tags = []
+        a.set_tags([])
         b = pysam.AlignedSegment.from_dict(a.to_dict(), a.header)
         self.assertEqual(a, b)
 
     def test_string_export_import_with_tags(self):
         a = self.build_read()
-        a.tags = [("XD", 12), ("RF", "abc")]
+        a.set_tags([("XD", 12), ("RF", "abc")])
         b = pysam.AlignedSegment.from_dict(a.to_dict(), a.header)
         self.assertEqual(a, b)
                 

@@ -45,7 +45,6 @@ cdef class FastaFile:
 cdef class FastqProxy:
     cdef kseq_t * _delegate
     cdef cython.str to_string(self)
-    cdef cython.str tostring(self)
     cpdef array.array get_quality_array(self, int offset=*)
 
 
@@ -55,8 +54,8 @@ cdef class FastxRecord:
     """
     cdef public str comment, quality, sequence, name
     cdef cython.str to_string(self)
-    cdef cython.str tostring(self)
     cpdef array.array get_quality_array(self, int offset=*)
+
 
 cdef class FastxFile:
     cdef object _filename
@@ -67,14 +66,3 @@ cdef class FastxFile:
 
     cdef kseq_t * getCurrent(self)
     cdef int cnext(self)
-
-
-# Compatibility Layer for pysam 0.8.1
-cdef class FastqFile(FastxFile):
-    pass
-
-
-# Compatibility Layer for pysam < 0.8
-cdef class Fastafile(FastaFile):
-    pass
-
