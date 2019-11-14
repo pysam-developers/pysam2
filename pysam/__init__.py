@@ -11,8 +11,6 @@ import pysam.libctabix as libctabix
 from pysam.libctabix import *
 # import pysam.libctabixproxies as libctabixproxies
 # from pysam.libctabixproxies import *
-import pysam.libcsamfile as libcsamfile
-from pysam.libcsamfile import *
 import pysam.libcalignmentfile as libcalignmentfile
 from pysam.libcalignmentfile import *
 import pysam.libcalignedsegment as libcalignedsegment
@@ -37,8 +35,7 @@ __all__ = \
     libcfaidx.__all__ +\
     libctabixproxies.__all__ +\
     libcalignmentfile.__all__ +\
-    libcalignedsegment.__all__ +\
-    libcsamfile.__all__
+    libcalignedsegment.__all__
 
 
 from pysam.version import __version__
@@ -65,7 +62,6 @@ def get_libraries():
     dirname = os.path.abspath(os.path.join(os.path.dirname(__file__)))
     pysam_libs = ['libctabixproxies',
                   'libcfaidx',
-                  'libcsamfile',
                   'libcvcf',
                   'libcbcf',
                   'libchtslib',

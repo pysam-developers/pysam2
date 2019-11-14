@@ -7,8 +7,6 @@ import unittest
 from pysam import AlignmentFile
 from TestUtils import BAM_DATADIR
 
-IS_PYTHON2 = sys.version_info[0] == 2
-
 
 def alignmentfile_writer_thread(infile, outfile):
     def _writer_thread(infile, outfile):
@@ -40,9 +38,7 @@ class StreamTest(unittest.TestCase):
                 read += 1
         return 0, read
 
-    @unittest.skipIf(IS_PYTHON2, "no context manager in py2")
     def test_text_processing(self):
-
         with subprocess.Popen('head -n200',
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE,

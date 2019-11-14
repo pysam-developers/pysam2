@@ -96,7 +96,6 @@ from cpython.dict    cimport PyDict_GetItemString, PyDict_SetItemString
 from cpython.tuple   cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.bytes   cimport PyBytes_FromStringAndSize
 from cpython.unicode cimport PyUnicode_DecodeUTF8
-from cpython.version cimport PY_MAJOR_VERSION
 
 from pysam.libchtslib cimport HTSFile, hisremote
 
@@ -148,11 +147,7 @@ cdef inline bcf_str_cache_get_charptr(const char* s):
     if pystr:
         return <object>pystr
 
-    if PY_MAJOR_VERSION < 3:
-        val = s
-    else:
-        val = PyUnicode_DecodeUTF8(s, strlen(s), NULL)
-
+    val = PyUnicode_DecodeUTF8(s, strlen(s), NULL)
     PyDict_SetItemString(bcf_str_cache, s, val)
 
     return val

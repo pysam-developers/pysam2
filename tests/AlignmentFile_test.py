@@ -662,7 +662,7 @@ class TestIO(unittest.TestCase):
         samfile = pysam.AlignmentFile(f, "rb")
         f.close()
         self.assertTrue(f.closed)
-        # access to Samfile still works
+        # access to AlignmentFile still works
         self.checkEcho("ex1.bam",
                        "ex1.bam",
                        "tmp_ex1.bam",
@@ -787,8 +787,8 @@ class TestIO(unittest.TestCase):
                        "r", "wbu")
 
     def testEmptyBAM(self):
-        samfile = pysam.Samfile(os.path.join(BAM_DATADIR, "empty.bam"),
-                                "rb")
+        samfile = pysam.AlignmentFile(os.path.join(BAM_DATADIR, "empty.bam"),
+                                      "rb")
         self.assertEqual(samfile.mapped, 0)
         self.assertEqual(samfile.unmapped, 0)
         self.assertEqual(samfile.nocoordinate, 0)
@@ -796,11 +796,11 @@ class TestIO(unittest.TestCase):
     def testEmptyWithHeaderBAM(self):
         self.assertRaises(
             ValueError,
-            pysam.Samfile,
+            pysam.AlignmentFile,
             os.path.join(BAM_DATADIR, "example_empty_with_header.bam"),
             "rb")
 
-        samfile = pysam.Samfile(
+        samfile = pysam.AlignmentFile(
             os.path.join(BAM_DATADIR, "example_empty_with_header.bam"),
             "rb",
             check_sq=False)

@@ -62,7 +62,6 @@ import struct
 
 cimport cython
 from cpython cimport array as c_array
-from cpython.version cimport PY_MAJOR_VERSION
 from cpython cimport PyBytes_FromStringAndSize
 from libc.string cimport strchr
 from cpython cimport array as c_array
@@ -80,21 +79,13 @@ from pysam.libcutils cimport qualities_to_qualitystring, qualitystring_to_array,
 cdef char * htslib_types = 'cCsSiIf'
 cdef char * parray_types = 'bBhHiIf'
 
-cdef bint IS_PYTHON3 = PY_MAJOR_VERSION >= 3
-
 # translation tables
 
 # cigar code to character and vice versa
 cdef char* CODE2CIGAR= "MIDNSHP=XB"
 cdef int NCIGAR_CODES = 10
 
-if IS_PYTHON3:
-    CIGAR2CODE = dict([y, x] for x, y in enumerate(CODE2CIGAR))
-    maketrans = str.maketrans
-else:
-    CIGAR2CODE = dict([ord(y), x] for x, y in enumerate(CODE2CIGAR))
-    maketrans = string.maketrans
-
+CIGAR2CODE = dict([y, x] for x, y in enumerate(CODE2CIGAR))
 CIGAR_REGEX = re.compile("(\d+)([MIDNSHP=XB])")
 
 # names for keys in dictionary representation of an AlignedSegment
@@ -357,10 +348,7 @@ cdef inline pack_tags(tags):
             typecode = 0
         else:
             # only first character in valuecode matters
-            if IS_PYTHON3:
-                typecode = force_bytes(valuetype)[0]
-            else:
-                typecode = ord(valuetype[0])
+            typecode = force_bytes(valuetype)[0]
 
         pytag = force_bytes(pytag)
         pytype = type(value)
@@ -398,18 +386,11 @@ cdef inline pack_tags(tags):
             # use array.tostring() to retrieve byte representation and
             # save as bytes
             datafmt = "2sBBI%is" % (len(value) * DATATYPE2FORMAT[typecode][1])
-            if IS_PYTHON3:
-                args.extend([pytag[:2],
-                             ord("B"),
-                             typecode,
-                             len(value),
-                             value.tobytes()])
-            else:
-                args.extend([pytag[:2],
-                             ord("B"),
-                             typecode,
-                             len(value),
-                             force_bytes(value.tostring())])
+            args.extend([pytag[:2],
+                         ord("B"),
+                         typecode,
+                         len(value),
+                         value.tobytes()])
 
         else:
             if typecode == 0:
@@ -1848,7 +1829,7 @@ cdef class AlignedSegment:
             return None
         s = force_str(self.query_sequence)
         if self.is_reverse:
-            s = s.translate(maketrans("ACGTacgtNnXx", "TGCAtgcaNnXx"))[::-1]
+            s = s.translate(str.maketrans("ACGTacgtNnXx", "TGCAtgcaNnXx"))[::-1]
         return s
 
     def get_forward_qualities(self):

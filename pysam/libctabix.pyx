@@ -66,8 +66,6 @@ from cpython cimport PyErr_SetString, PyBytes_Check, \
     PyUnicode_Check, PyBytes_FromStringAndSize, \
     PyObject_AsFileDescriptor
 
-from cpython.version cimport PY_MAJOR_VERSION
-
 cimport pysam.libctabixproxies as ctabixproxies
 
 from pysam.libchtslib cimport htsFile, hts_open, hts_close, HTS_IDX_START,\
@@ -1269,10 +1267,7 @@ def tabix_iterator(infile, parser):
     :class:`~pysam.asGTF`).
 
     """
-    if PY_MAJOR_VERSION >= 3:
-        return tabix_generic_iterator(infile, parser)
-    else:
-        return tabix_file_iterator(infile, parser)
+    return tabix_generic_iterator(infile, parser)
         
     # file objects can use C stdio
     # used to be: isinstance( infile, file):
