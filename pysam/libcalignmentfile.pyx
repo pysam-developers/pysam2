@@ -481,10 +481,6 @@ cdef class AlignmentHeader(object):
 
         return result
 
-    def as_dict(self):
-        """deprecated: use :meth:`to_dict()`"""
-        return self.to_dict()
-
     def get_reference_name(self, tid):
         if tid == -1:
             return None
@@ -1594,7 +1590,7 @@ cdef class AlignmentFile(HTSFile):
                     continue
 
             # count
-            seq = read.seq
+            seq = read.query_sequence
             quality = read.query_qualities
 
             for qpos, refpos in read.get_aligned_pairs(True):
@@ -1657,7 +1653,7 @@ cdef class AlignmentFile(HTSFile):
 
         match_or_deletion = {0, 2, 7, 8} # only M/=/X (0/7/8) and D (2) are related to genome position
         for r in read_iterator:
-            base_position = r.pos
+            base_position = r.reference_start
 
             for op, nt in r.cigartuples:
                 if op in match_or_deletion:
@@ -1941,24 +1937,6 @@ cdef class AlignmentFile(HTSFile):
                 return self.header.lengths
             else:
                 raise ValueError("header not available in closed files")
-
-    # Compatibility functions for pysam < 0.14
-    property text:
-        """deprecated, use .header directly"""
-        def __get__(self):
-            if self.header:
-                return self.header.__str__()
-            else:
-                raise ValueError("header not available in closed files")
-
-    # Compatibility functions for pysam < 0.8.3
-    def gettid(self, reference):
-        """deprecated, use get_tid() instead"""
-        return self.get_tid(reference)
-
-    def getrname(self, tid):
-        """deprecated, use get_reference_name() instead"""
-        return self.get_reference_name(tid)
 
 
 cdef class IteratorRow:

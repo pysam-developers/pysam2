@@ -118,7 +118,7 @@ class TestPileupReadSelection(unittest.TestCase):
         self.check_equal(refs, iterator)
 
 
-class TestPileupReadSelectionFastafile(TestPileupReadSelection):
+class TestPileupReadSelectionFastaFile(TestPileupReadSelection):
     '''test pileup functionality - backwards compatibility'''
 
     samfilename = os.path.join(BAM_DATADIR, "ex1.bam")
@@ -127,7 +127,7 @@ class TestPileupReadSelectionFastafile(TestPileupReadSelection):
     def setUp(self):
 
         self.samfile = pysam.AlignmentFile(self.samfilename)
-        self.fastafile = pysam.Fastafile(self.fastafilename)
+        self.fastafile = pysam.FastaFile(self.fastafilename)
 
 
 class TestPileupQueryPosition(unittest.TestCase):
@@ -209,9 +209,9 @@ class TestPileupObjects(unittest.TestCase):
 
         max_n = 0
         for pileupcol in self.samfile.pileup():
-            if max_n < pileupcol.n:
+            if max_n < pileupcol.nsegments:
                 max_col = pileupcol
-                max_n = pileupcol.n
+                max_n = pileupcol.nsegments
 
         self.assertRaises(ValueError, getattr, max_col, "pileups")
         self.assertRaises(ValueError, max_col.get_query_sequences)
@@ -247,10 +247,10 @@ class TestIteratorColumnBAM(unittest.TestCase):
                 self.assertLess(column.reference_pos, end)
             thiscov = len(column.pileups)
             refcov = self.mCoverages[
-                self.samfile.getrname(column.reference_id)][column.reference_pos]
+                self.samfile.get_reference_name(column.reference_id)][column.reference_pos]
             self.assertEqual(thiscov, refcov,
                              "wrong coverage at pos %s:%i %i should be %i" % (
-                                 self.samfile.getrname(column.reference_id),
+                                 self.samfile.get_reference_name(column.reference_id),
                                  column.reference_pos, thiscov, refcov))
 
     def testIterateAll(self):

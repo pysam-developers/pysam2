@@ -14,10 +14,7 @@ from collections import OrderedDict as odict
 import pysam
 from TestUtils import get_temp_filename, BAM_DATADIR
 
-if sys.version_info.major >= 3:
-    from io import StringIO
-else:
-    from StringIO import StringIO
+from io import StringIO
 
 
 class TestHeaderConstruction(unittest.TestCase):
@@ -67,7 +64,7 @@ class TestHeaderConstruction(unittest.TestCase):
     
     def compare_headers(self, test_header, ref_header=None):
         '''compare two headers a and b.'''
-        test_header_dict = test_header.as_dict()
+        test_header_dict = test_header.to_dict()
         if ref_header is None:
             ref_header = self.header_dict
             
@@ -150,18 +147,20 @@ class TestHeaderSAM(unittest.TestCase):
         self.compare_headers(self.header, self.samfile.header.to_dict())
         self.compare_headers(self.samfile.header.to_dict(), self.header)
 
+    @unittest.skip("Needs implementation")
     def test_text_access_works(self):
-        self.assertEqual(self.samfile.text, self.samfile.header.__str__())
+        self.assertEqual(self.samfile.header.to_string(),
+                         self.samfile.header.__str__())
         
     def test_name_mapping(self):
         for x, y in enumerate(("chr1", "chr2")):
-            tid = self.samfile.gettid(y)
-            ref = self.samfile.getrname(x)
+            tid = self.samfile.get_tid(y)
+            ref = self.samfile.get_reference_name(x)
             self.assertEqual(tid, x)
             self.assertEqual(ref, y)
 
-        self.assertEqual(self.samfile.gettid("chr?"), -1)
-        self.assertRaises(ValueError, self.samfile.getrname, 2)
+        self.assertEqual(self.samfile.get_tid("chr?"), -1)
+        self.assertRaises(ValueError, self.samfile.get_reference_name, 2)
 
     def test_dictionary_access_works(self):
         for key in self.header.keys():

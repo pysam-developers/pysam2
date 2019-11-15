@@ -968,7 +968,7 @@ cdef class AlignedSegment:
                                    self.query_alignment_length,
                                    self.query_sequence,
                                    self.query_qualities,
-                                   self.tags)))
+                                   self.get_tags())))
 
     def __copy__(self):
         return makeAlignedSegment(self._delegate, self.header)
@@ -1086,20 +1086,6 @@ cdef class AlignedSegment:
         sam_parse1(&line, dest.header.ptr, dest._delegate)
 
         return dest
-
-    cpdef tostring(self, htsfile=None):
-        """deprecated, use :meth:`to_string()` instead.
-
-        Parameters
-        ----------
-
-        htsfile:
-            (deprecated) AlignmentFile object to map numerical
-            identifiers to chromosome names. This parameter is present
-            for backwards compatibility and ignored.
-        """
-
-        return self.to_string()
 
     def to_dict(self):
         """returns a json representation of the aligned segment.
@@ -1774,25 +1760,6 @@ cdef class AlignedSegment:
                 pos += l
 
         return result
-
-    def infer_query_length(self, always=False):
-        """infer query length from CIGAR alignment.
-
-        This method deduces the query length from the CIGAR alignment
-        but does not include hard-clipped bases.
-
-        Returns None if CIGAR alignment is not present.
-
-        If *always* is set to True, `infer_read_length` is used instead.
-        This is deprecated and only present for backward compatibility.
-        """
-        if always is True:
-            return self.infer_read_length()
-        cdef int32_t l = calculateQueryLengthWithoutHardClipping(self._delegate)
-        if l > 0:
-            return l
-        else:
-            return None
 
     def infer_read_length(self):
         """infer read length from CIGAR alignment.
@@ -2580,176 +2547,6 @@ cdef class AlignedSegment:
             memcpy(s, temp, new_size)
 
 
-    ########################################################
-    # Compatibility Accessors
-    # Functions, properties for compatibility with pysam < 0.8
-    #
-    # Several options
-    #     change the factory functions according to API
-    #         * requires code changes throughout, incl passing
-    #           handles to factory functions
-    #     subclass functions and add attributes at runtime
-    #         e.g.: AlignedSegments.qname = AlignedSegments.query_name
-    #         * will slow down the default interface
-    #     explicit declaration of getters/setters
-    ########################################################
-    property qname:
-        """deprecated, use query_name instead"""
-        def __get__(self): return self.query_name
-        def __set__(self, v): self.query_name = v
-    property tid:
-        """deprecated, use reference_id instead"""
-        def __get__(self): return self.reference_id
-        def __set__(self, v): self.reference_id = v
-    property pos:
-        """deprecated, use reference_start instead"""
-        def __get__(self): return self.reference_start
-        def __set__(self, v): self.reference_start = v
-    property mapq:
-        """deprecated, use mapping_quality instead"""
-        def __get__(self): return self.mapping_quality
-        def __set__(self, v): self.mapping_quality = v
-    property rnext:
-        """deprecated, use next_reference_id instead"""
-        def __get__(self): return self.next_reference_id
-        def __set__(self, v): self.next_reference_id = v
-    property pnext:
-        """deprecated, use next_reference_start instead"""
-        def __get__(self):
-            return self.next_reference_start
-        def __set__(self, v):
-            self.next_reference_start = v
-    property cigar:
-        """deprecated, use cigartuples instead"""
-        def __get__(self):
-            r = self.cigartuples
-            if r is None:
-                r = []
-            return r
-        def __set__(self, v): self.cigartuples = v
-    property tlen:
-        """deprecated, use template_length instead"""
-        def __get__(self):
-            return self.template_length
-        def __set__(self, v):
-            self.template_length = v
-    property seq:
-        """deprecated, use query_sequence instead"""
-        def __get__(self):
-            return self.query_sequence
-        def __set__(self, v):
-            self.query_sequence = v
-    property qual:
-        """deprecated, query_qualities instead"""
-        def __get__(self):
-            return array_to_qualitystring(self.query_qualities)
-        def __set__(self, v):
-            self.query_qualities = qualitystring_to_array(v)
-    property alen:
-        """deprecated, reference_length instead"""
-        def __get__(self):
-            return self.reference_length
-        def __set__(self, v):
-            self.reference_length = v
-    property aend:
-        """deprecated, reference_end instead"""
-        def __get__(self):
-            return self.reference_end
-        def __set__(self, v):
-            self.reference_end = v
-    property rlen:
-        """deprecated, query_length instead"""
-        def __get__(self):
-            return self.query_length
-        def __set__(self, v):
-            self.query_length = v
-    property query:
-        """deprecated, query_alignment_sequence instead"""
-        def __get__(self):
-            return self.query_alignment_sequence
-        def __set__(self, v):
-            self.query_alignment_sequence = v
-    property qqual:
-        """deprecated, query_alignment_qualities instead"""
-        def __get__(self):
-            return array_to_qualitystring(self.query_alignment_qualities)
-        def __set__(self, v):
-            self.query_alignment_qualities = qualitystring_to_array(v)
-    property qstart:
-        """deprecated, use query_alignment_start instead"""
-        def __get__(self):
-            return self.query_alignment_start
-        def __set__(self, v):
-            self.query_alignment_start = v
-    property qend:
-        """deprecated, use query_alignment_end instead"""
-        def __get__(self):
-            return self.query_alignment_end
-        def __set__(self, v):
-            self.query_alignment_end = v
-    property qlen:
-        """deprecated, use query_alignment_length instead"""
-        def __get__(self):
-            return self.query_alignment_length
-        def __set__(self, v):
-            self.query_alignment_length = v
-    property mrnm:
-        """deprecated, use next_reference_id instead"""
-        def __get__(self):
-            return self.next_reference_id
-        def __set__(self, v):
-            self.next_reference_id = v
-    property mpos:
-        """deprecated, use next_reference_start instead"""
-        def __get__(self):
-            return self.next_reference_start
-        def __set__(self, v):
-            self.next_reference_start = v
-    property rname:
-        """deprecated, use reference_id instead"""
-        def __get__(self):
-            return self.reference_id
-        def __set__(self, v):
-            self.reference_id = v
-    property isize:
-        """deprecated, use template_length instead"""
-        def __get__(self):
-            return self.template_length
-        def __set__(self, v):
-            self.template_length = v
-    property blocks:
-        """deprecated, use get_blocks() instead"""
-        def __get__(self):
-            return self.get_blocks()
-    property aligned_pairs:
-        """deprecated, use get_aligned_pairs() instead"""
-        def __get__(self):
-            return self.get_aligned_pairs()
-    property inferred_length:
-        """deprecated, use infer_query_length() instead"""
-        def __get__(self):
-            return self.infer_query_length()
-    property positions:
-        """deprecated, use get_reference_positions() instead"""
-        def __get__(self):
-            return self.get_reference_positions()
-    property tags:
-        """deprecated, use get_tags() instead"""
-        def __get__(self):
-            return self.get_tags()
-        def __set__(self, tags):
-            self.set_tags(tags)
-    def overlap(self):
-        """deprecated, use get_overlap() instead"""
-        return self.get_overlap()
-    def opt(self, tag):
-        """deprecated, use get_tag() instead"""
-        return self.get_tag(tag)
-    def setTag(self, tag, value, value_type=None, replace=True):
-        """deprecated, use set_tag() instead"""
-        return self.set_tag(tag, value, value_type, replace)
-
-
 cdef class PileupColumn:
     '''A pileup of reads at a particular reference sequence position
     (:term:`column`). A pileup column contains all the reads that map
@@ -2838,27 +2635,6 @@ cdef class PileupColumn:
     # Compatibility Accessors
     # Functions, properties for compatibility with pysam < 0.8
     ########################################################
-    property pos:
-        """deprecated: use reference_pos"""
-        def __get__(self):
-            return self.reference_pos
-        def __set__(self, v):
-            self.reference_pos = v
-
-    property tid:
-        """deprecated: use reference_id"""
-        def __get__(self):
-            return self.reference_id
-        def __set__(self, v):
-            self.reference_id = v
-
-    property n:
-        """deprecated: use nsegments"""
-        def __get__(self):
-            return self.nsegments
-        def __set__(self, v):
-            self.nsegments = v
-
     def get_num_aligned(self):
         """return number of aligned bases at pileup column position.
 

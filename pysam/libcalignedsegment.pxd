@@ -59,9 +59,6 @@ cdef class AlignedSegment:
     # returns a valid sam alignment string
     cpdef to_string(self)
 
-    # returns a valid sam alignment string (deprecated)
-    cpdef tostring(self, htsfile=*)
-
 
 cdef class PileupColumn:
     cdef bam_pileup1_t ** plp

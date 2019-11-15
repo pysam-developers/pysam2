@@ -184,17 +184,6 @@ class TestFastxFileFastq(unittest.TestCase):
         self.assertEqual(inf.closed, True)
 
 
-# Test for backwards compatibility
-class TestFastqFileFastq(TestFastxFileFastq):
-    filetype = pysam.FastqFile
-
-
-# Test for backwards compatibility
-class TestFastxFileFasta(TestFastxFileFastq):
-    filetype = pysam.FastqFile
-    filename = "faidx_ex1.fa"
-
-
 class TestFastxFileFastqStream(TestFastxFileFastq):
     persist = False
 
@@ -231,7 +220,7 @@ class TestRemoteFileFTP(unittest.TestCase):
             return
 
         try:
-            with pysam.Fastafile(self.url) as f:
+            with pysam.FastaFile(self.url) as f:
                 self.assertEqual(
                     len(f.fetch("chr1", 0, 1000)),
                     1000)
@@ -243,7 +232,7 @@ class TestRemoteFileFTP(unittest.TestCase):
             return
 
         try:
-            with pysam.Fastafile(self.url) as f:
+            with pysam.FastaFile(self.url) as f:
                 self.assertEqual(len(f.references), 3366)
                 self.assertTrue("chr1" in f.references)
                 self.assertEqual(f.lengths[0],
