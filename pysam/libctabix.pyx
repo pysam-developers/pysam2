@@ -1,6 +1,4 @@
-# cython: embedsignature=True
-# cython: profile=True
-###############################################################################
+# cython: language_level=3, embedsignature=True, profile=True
 ###############################################################################
 # Cython wrapper for access to tabix indexed files in bgzf format
 ###############################################################################
@@ -23,10 +21,6 @@
 # class tabix_file_iterator
 # class TabixIterator         iterator class over rows in bgzf file
 # class EmptyIterator
-#
-# For backwards compatibility, the following classes are also defined:
-#
-# class Tabixfile   equivalent to TabixFile
 #
 ###############################################################################
 #
@@ -99,10 +93,10 @@ cdef class Parser:
 
 
 cdef class asTuple(Parser):
-    '''converts a :term:`tabix row` into a python tuple.
+    """converts a :term:`tabix row` into a python tuple.
 
     A field in a row is accessed by numeric index.
-    ''' 
+    """
     cdef parse(self, char * buffer, int len):
         cdef ctabixproxies.TupleProxy r
         r = ctabixproxies.TupleProxy(self.encoding)
@@ -113,9 +107,9 @@ cdef class asTuple(Parser):
 
 
 cdef class asGFF3(Parser):
-    '''converts a :term:`tabix row` into a GFF record with the following
+    """converts a :term:`tabix row` into a GFF record with the following
     fields:
-   
+
     +----------+----------+-------------------------------+
     |*Column*  |*Name*    |*Content*                      |
     +----------+----------+-------------------------------+
@@ -140,7 +134,7 @@ cdef class asGFF3(Parser):
     |9         |attributes|the attribute field            |
     +----------+----------+-------------------------------+
 
-    ''' 
+    """
     cdef parse(self, char * buffer, int len):
         cdef ctabixproxies.GFF3Proxy r
         r = ctabixproxies.GFF3Proxy(self.encoding)
@@ -149,9 +143,9 @@ cdef class asGFF3(Parser):
 
 
 cdef class asGTF(Parser):
-    '''converts a :term:`tabix row` into a GTF record with the following
+    """converts a :term:`tabix row` into a GTF record with the following
     fields:
-   
+
     +----------+----------+-------------------------------+
     |*Column*  |*Name*    |*Content*                      |
     +----------+----------+-------------------------------+
@@ -187,16 +181,16 @@ cdef class asGTF(Parser):
     |transcript_id       |the transcript identifier     |
     +--------------------+------------------------------+
 
-    ''' 
+    """
     cdef parse(self, char * buffer, int len):
         cdef ctabixproxies.GTFProxy r
         r = ctabixproxies.GTFProxy(self.encoding)
         r.copy(buffer, len)
         return r
-    
+
 
 cdef class asBed(Parser):
-    '''converts a :term:`tabix row` into a bed record
+    """converts a :term:`tabix row` into a bed record
     with the following fields:
 
     +-----------+-----------+------------------------------------------+
@@ -235,7 +229,7 @@ cdef class asBed(Parser):
     fields are optional, but if one is defined, all the preceding
     need to be defined as well.
 
-    ''' 
+    """
     cdef parse(self, char * buffer, int len):
         cdef ctabixproxies.BedProxy r
         r = ctabixproxies.BedProxy(self.encoding)
@@ -243,10 +237,10 @@ cdef class asBed(Parser):
         return r
 
 
-cdef class asVCF(Parser): 
-    '''converts a :term:`tabix row` into a VCF record with
+cdef class asVCF(Parser):
+    """converts a :term:`tabix row` into a VCF record with
     the following fields:
-    
+
     +----------+---------+------------------------------------+
     |*Column*  |*Field*  |*Contents*                          |
     |          |         |                                    |
@@ -276,7 +270,7 @@ cdef class asVCF(Parser):
         first_sample_genotype = vcf[0]
         second_sample_genotype = vcf[1]
 
-    '''
+    """
     cdef parse(self, char * buffer, int len):
         cdef ctabixproxies.VCFProxy r
         r = ctabixproxies.VCFProxy(self.encoding)
@@ -291,10 +285,10 @@ cdef class TabixFile:
     The file is automatically opened. The index file of file
     ``<filename>`` is expected to be called ``<filename>.tbi``
     by default (see parameter `index`).
-    
+
     Parameters
     ----------
-    
+
     filename : string
         Filename of bgzf file to be opened.
 
@@ -304,9 +298,9 @@ cdef class TabixFile:
 
     mode : char
         The file opening mode. Currently, only ``r`` is permitted.
-        
+
     parser : :class:`pysam.Parser`
-    
+
         sets the default parser for this tabix file. If `parser`
         is None, the results are returned as an unparsed string.
         Otherwise, `parser` is assumed to be a functor that will return
@@ -324,7 +318,7 @@ cdef class TabixFile:
 
     Raises
     ------
-    
+
     ValueError
         if index file is missing.
 
@@ -355,7 +349,7 @@ cdef class TabixFile:
                index=None,
                threads=1,
               ):
-        '''open a :term:`tabix file` for reading.'''
+        """open a :term:`tabix file` for reading."""
 
         if mode != 'r':
             raise ValueError("invalid file opening mode `%s`" % mode)
@@ -388,7 +382,7 @@ cdef class TabixFile:
 
         if self.htsfile == NULL:
             raise IOError("could not open file `%s`" % filename)
-        
+
         #if self.htsfile.format.category != region_list:
         #    raise ValueError("file does not contain region data")
 
@@ -402,10 +396,10 @@ cdef class TabixFile:
             self.start_offset = self.tell()
 
     def _dup(self):
-        '''return a copy of this tabix file.
-        
+        """return a copy of this tabix file.
+
         The file is being re-opened.
-        '''
+        """
         return TabixFile(self.filename,
                          mode="r",
                          threads=self.threads,
@@ -413,33 +407,33 @@ cdef class TabixFile:
                          index=self.filename_index,
                          encoding=self.encoding)
 
-    def fetch(self, 
+    def fetch(self,
               reference=None,
-              start=None, 
-              end=None, 
+              start=None,
+              end=None,
               region=None,
               parser=None,
               multiple_iterators=False):
-        '''fetch one or more rows in a :term:`region` using 0-based
+        """fetch one or more rows in a :term:`region` using 0-based
         indexing. The region is specified by :term:`reference`,
         *start* and *end*. Alternatively, a samtools :term:`region`
         string can be supplied.
 
-        Without *reference* or *region* all entries will be fetched. 
-        
+        Without *reference* or *region* all entries will be fetched.
+
         If only *reference* is set, all reads matching on *reference*
         will be fetched.
 
         If *parser* is None, the default parser will be used for
         parsing.
-        
+
         Set *multiple_iterators* to true if you will be using multiple
         iterators on the same file at the same time. The iterator
         returned will receive its own copy of a filehandle to the file
         effectively re-opening the file. Re-opening a file creates
         some overhead, so beware.
 
-        '''
+        """
         if not self.is_open():
             raise ValueError("I/O operation on closed file")
 
@@ -450,7 +444,7 @@ cdef class TabixFile:
                     raise ValueError("end out of range (%i)" % end)
                 if start is None:
                     start = 0
-                    
+
                 if start < 0:
                     raise ValueError("start out of range (%i)" % end)
                 elif start > end:
@@ -507,13 +501,13 @@ cdef class TabixFile:
                 raise ValueError(
                     "could not create iterator for region '%s'" %
                     region)
-            
+
         # use default parser if no parser is specified
         if parser is None:
             parser = fileobj.parser
 
         cdef TabixIterator a
-        if parser is None: 
+        if parser is None:
             a = TabixIterator(encoding=fileobj.encoding)
         else:
             parser.set_encoding(fileobj.encoding)
@@ -529,75 +523,72 @@ cdef class TabixFile:
     ###############################################################
     ## properties
     ###############################################################
-    property header:
-        '''the file header.
+    @property
+    def header(self):
+        """the file header.
 
         The file header consists of the lines at the beginning of a
         file that are prefixed by the comment character ``#``.
-       
+
         .. note::
             The header is returned as an iterator presenting lines
             without the newline character.
-        '''
-        
-        def __get__(self):
+        """
+        cdef char *cfilename = self.filename
+        cdef char *cfilename_index = self.filename_index
 
-            cdef char *cfilename = self.filename
-            cdef char *cfilename_index = self.filename_index
-            
-            cdef kstring_t buffer
-            buffer.l = buffer.m = 0
-            buffer.s = NULL
-            
-            cdef htsFile * fp = NULL
-            cdef int KS_SEP_LINE = 2
-            cdef tbx_t * tbx = NULL
-            lines = []
-            with nogil:
-                fp = hts_open(cfilename, 'r')
-                
-            if fp == NULL:
-                raise OSError("could not open {} for reading header".format(self.filename))
+        cdef kstring_t buffer
+        buffer.l = buffer.m = 0
+        buffer.s = NULL
 
-            with nogil:
-                tbx = tbx_index_load2(cfilename, cfilename_index)
-                
-            if tbx == NULL:
-                raise OSError("could not load .tbi/.csi index of {}".format(self.filename))
+        cdef htsFile * fp = NULL
+        cdef int KS_SEP_LINE = 2
+        cdef tbx_t * tbx = NULL
+        lines = []
+        with nogil:
+            fp = hts_open(cfilename, 'r')
 
-            while hts_getline(fp, KS_SEP_LINE, &buffer) >= 0:
-                if not buffer.l or buffer.s[0] != tbx.conf.meta_char:
-                    break
-                lines.append(force_str(buffer.s, self.encoding))
+        if fp == NULL:
+            raise OSError("could not open {} for reading header".format(self.filename))
 
-            with nogil:
-                hts_close(fp)
-                free(buffer.s)
+        with nogil:
+            tbx = tbx_index_load2(cfilename, cfilename_index)
 
-            return lines
+        if tbx == NULL:
+            raise OSError("could not load .tbi/.csi index of {}".format(self.filename))
 
-    property contigs:
-        '''list of chromosome names'''
-        def __get__(self):
-            cdef char ** sequences
-            cdef int nsequences
-            
-            with nogil:
-                sequences = tbx_seqnames(self.index, &nsequences)
-            cdef int x
-            result = []
-            for x from 0 <= x < nsequences:
-                result.append(force_str(sequences[x]))
-            
-            # htslib instructions:
-            # only free container, not the sequences themselves
-            free(sequences)
+        while hts_getline(fp, KS_SEP_LINE, &buffer) >= 0:
+            if not buffer.l or buffer.s[0] != tbx.conf.meta_char:
+                break
+            lines.append(force_str(buffer.s, self.encoding))
 
-            return result
-            
+        with nogil:
+            hts_close(fp)
+            free(buffer.s)
+
+        return lines
+
+    @property
+    def contigs(self):
+        """list of chromosome names"""
+        cdef char ** sequences
+        cdef int nsequences
+
+        with nogil:
+            sequences = tbx_seqnames(self.index, &nsequences)
+        cdef int x
+        result = []
+        for x from 0 <= x < nsequences:
+            result.append(force_str(sequences[x]))
+
+        # htslib instructions:
+        # only free container, not the sequences themselves
+        free(sequences)
+
+        return result
+
     def close(self):
-        '''
-        closes the :class:`pysam.TabixFile`.'''
+        """closes the :class:`pysam.TabixFile`."""
         if self.htsfile != NULL:
             hts_close(self.htsfile)
             self.htsfile = NULL
@@ -623,20 +614,20 @@ cdef class TabixIterator:
 
     def __init__(self, encoding="ascii"):
         self.encoding = encoding
-    
+
     def __iter__(self):
         self.buffer.s = NULL
         self.buffer.l = 0
         self.buffer.m = 0
 
-        return self 
+        return self
 
     cdef int __cnext__(self):
-        '''iterate to next element.
-        
+        """iterate to next element.
+
         Return -5 if file has been closed when this function
         was called.
-        '''
+        """
         if self.tabixfile.htsfile == NULL:
             return -5
 
@@ -653,17 +644,17 @@ cdef class TabixIterator:
             if retval < 0:
                 break
 
-            if self.buffer.s[0] != '#':
+            if self.buffer.s[0] != b'#':
                 break
 
         return retval
 
-    def __next__(self): 
+    def __next__(self):
         """python version of next().
 
         pyrex uses this non-standard name instead of next()
         """
-        
+
         cdef int retval = self.__cnext__()
         if retval == -5:
             raise IOError("iteration on closed file")
@@ -671,9 +662,6 @@ cdef class TabixIterator:
             raise StopIteration
 
         return charptr_to_str(self.buffer.s, self.encoding)
-
-    def next(self):
-        return self.__next__()
 
     def __dealloc__(self):
         if <void*>self.iterator != NULL:
@@ -683,13 +671,10 @@ cdef class TabixIterator:
 
 
 class EmptyIterator:
-    '''empty iterator'''
+    """empty iterator"""
 
     def __iter__(self):
         return self
-
-    def next(self):
-        raise StopIteration()
 
     def __next__(self):
         raise StopIteration()
@@ -703,18 +688,18 @@ cdef class TabixIteratorParsed(TabixIterator):
     Returns parsed data.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  Parser parser):
-        
+
         TabixIterator.__init__(self)
         self.parser = parser
 
-    def __next__(self): 
+    def __next__(self):
         """python version of next().
 
         pyrex uses this non-standard name instead of next()
         """
-        
+
         cdef int retval = self.__cnext__()
         if retval == -5:
             raise IOError("iteration on closed file")
@@ -727,9 +712,9 @@ cdef class TabixIteratorParsed(TabixIterator):
 
 cdef class GZIterator:
     def __init__(self, filename, int buffer_size=65536, encoding="ascii"):
-        '''iterate line-by-line through gzip (or bgzip)
+        """iterate line-by-line through gzip (or bgzip)
         compressed file.
-        '''
+        """
         if not os.path.exists(filename):
             raise IOError("No such file or directory: %s" % filename)
 
@@ -746,7 +731,7 @@ cdef class GZIterator:
         self.buffer.s = <char*>malloc(buffer_size)
 
     def __dealloc__(self):
-        '''close file.'''
+        """close file."""
         if self.gzipfile != NULL:
             bgzf_close(self.gzipfile)
             self.gzipfile = NULL
@@ -763,9 +748,9 @@ cdef class GZIterator:
         cdef int retval = 0
         while 1:
             with nogil:
-                retval = ks_getuntil(self.kstream, '\n', &self.buffer, &dret)
-            
-            if retval < 0: 
+                retval = ks_getuntil(self.kstream, b'\n', &self.buffer, &dret)
+
+            if retval < 0:
                 break
 
             return dret
@@ -781,9 +766,9 @@ cdef class GZIterator:
 
 
 cdef class GZIteratorHead(GZIterator):
-    '''iterate line-by-line through gzip (or bgzip)
+    """iterate line-by-line through gzip (or bgzip)
     compressed file returning comments at top of file.
-    '''
+    """
 
     def __next__(self):
         """python version of next().
@@ -791,16 +776,16 @@ cdef class GZIteratorHead(GZIterator):
         cdef int retval = self.__cnext__()
         if retval < 0:
             raise StopIteration
-        if self.buffer.s[0] == '#':
+        if self.buffer.s[0] == b'#':
             return self.buffer.s
         else:
             raise StopIteration
 
 
 cdef class GZIteratorParsed(GZIterator):
-    '''iterate line-by-line through gzip (or bgzip)
+    """iterate line-by-line through gzip (or bgzip)
     compressed file returning comments at top of file.
-    '''
+    """
 
     def __init__(self, parser):
         self.parser = parser
@@ -816,14 +801,14 @@ cdef class GZIteratorParsed(GZIterator):
                                  self.buffer.l)
 
 
-def tabix_compress(filename_in, 
+def tabix_compress(filename_in,
                    filename_out,
                    force=False):
-    '''compress *filename_in* writing the output to *filename_out*.
-    
+    """compress *filename_in* writing the output to *filename_out*.
+
     Raise an IOError if *filename_out* already exists, unless *force*
     is set.
-    '''
+    """
 
     if not force and os.path.exists(filename_out):
         raise IOError(
@@ -855,7 +840,7 @@ def tabix_compress(filename_in,
 
     buffer = malloc(WINDOW_SIZE)
     c = 1
-    
+
     while c > 0:
         with nogil:
             c = read(fd_src, buffer, WINDOW_SIZE)
@@ -865,7 +850,7 @@ def tabix_compress(filename_in,
         if r < 0:
             free(buffer)
             raise IOError("writing failed")
-        
+
     free(buffer)
     r = bgzf_close(fp)
     if r < 0:
@@ -899,7 +884,7 @@ def tabix_index(filename,
                 keep_original=False,
                 csi=False,
                 ):
-    '''index tab-separated *filename* using tabix.
+    """index tab-separated *filename* using tabix.
 
     An existing index will not be overwritten unless *force* is set.
 
@@ -911,14 +896,14 @@ def tabix_index(filename,
 
     Column indices are 0-based. Note that this is different from the
     tabix command line utility where column indices start at 1.
-    
+
     Coordinates in the file are assumed to be 1-based unless
     *zerobased* is set.
 
     If *preset* is provided, the column coordinates are taken from a
     preset. Valid values for preset are "gff", "bed", "sam", "vcf",
     psltbl", "pileup".
-    
+
     Lines beginning with *meta_char* and the first *line_skip* lines
     will be skipped.
 
@@ -927,7 +912,7 @@ def tabix_index(filename,
     file will be retained.
 
     *min-shift* sets the minimal interval size to 1<<INT; 0 for the
-    old tabix index. The default of -1 is changed inside htslib to 
+    old tabix index. The default of -1 is changed inside htslib to
     the old tabix default of 0.
 
     *index* controls the filename which should be used for creating the index.
@@ -941,8 +926,8 @@ def tabix_index(filename,
 
     returns the filename of the compressed data
 
-    '''
-    
+    """
+
     if not os.path.exists(filename):
         raise IOError("No such file '%s'" % filename)
 
@@ -963,19 +948,19 @@ def tabix_index(filename,
     cdef htsFile *fp = hts_open(cfn, "r")
     cdef htsExactFormat fmt = fp.format.format
     hts_close(fp)
-    
+
     # columns (1-based):
     #   preset-code, contig, start, end, metachar for
     #     comments, lines to ignore at beginning
     # 0 is a missing column
     preset2conf = {
-        'gff' : (TBX_GENERIC, 1, 4, 5, ord('#'), 0),
-        'bed' : (TBX_UCSC, 1, 2, 3, ord('#'), 0),
-        'psltbl' : (TBX_UCSC, 15, 17, 18, ord('#'), 0),
-        'sam' : (TBX_SAM, 3, 4, 0, ord('@'), 0),
-        'vcf' : (TBX_VCF, 1, 2, 0, ord('#'), 0),
+        'gff': (TBX_GENERIC, 1, 4, 5, ord('#'), 0),
+        'bed': (TBX_UCSC, 1, 2, 3, ord('#'), 0),
+        'psltbl': (TBX_UCSC, 15, 17, 18, ord('#'), 0),
+        'sam': (TBX_SAM, 3, 4, 0, ord('@'), 0),
+        'vcf': (TBX_VCF, 1, 2, 0, ord('#'), 0),
         }
-    
+
     conf_data = None
     if preset == "bcf" or fmt == bcf:
         csi = True
@@ -991,7 +976,7 @@ def tabix_index(filename,
     else:
         if end_col is None:
             end_col = -1
-            
+
         preset = 0
         # tabix internally works with 0-based coordinates and
         # open/closed intervals.  When using a preset, conversion is
@@ -1012,13 +997,13 @@ def tabix_index(filename,
         suffix = ".csi"
     else:
         suffix = ".tbi"
-    index = index or filename + suffix    
+    index = index or filename + suffix
     fn_index = encode_filename(index)
 
     if not force and os.path.exists(index):
         raise IOError(
             "filename '%s' already exists, use *force* to overwrite" % index)
-    
+
     cdef char *fnidx = fn_index
     cdef int retval = 0
 
@@ -1028,76 +1013,12 @@ def tabix_index(filename,
     else:
         with nogil:
             retval = tbx_index_build2(cfn, fnidx, min_shift, &conf)
-            
+
     if retval != 0:
         raise OSError("building of index for {} failed".format(filename))
-    
+
     return filename
 
-# #########################################################
-# cdef class tabix_file_iterator_old:
-#     '''iterate over ``infile``.
-
-#     This iterator is not safe. If the :meth:`__next__()` method is called 
-#     after ``infile`` is closed, the result is undefined (see ``fclose()``).
-
-#     The iterator might either raise a StopIteration or segfault.
-#     '''
-
-
-#     def __cinit__(self, 
-#                   infile, 
-#                   Parser parser,
-#                   int buffer_size = 65536 ):
-
-#         cdef int fd = PyObject_AsFileDescriptor( infile )
-#         if fd == -1: raise ValueError( "I/O operation on closed file." )
-#         self.infile = fdopen( fd, 'r')
-
-#         if self.infile == NULL: raise ValueError( "I/O operation on closed file." )
-
-#         self.buffer = <char*>malloc( buffer_size )        
-#         self.size = buffer_size
-#         self.parser = parser
-
-#     def __iter__(self):
-#         return self
-
-#     cdef __cnext__(self):
-
-#         cdef char * b
-#         cdef size_t nbytes
-#         b = self.buffer
-
-#         while not feof( self.infile ):
-#             nbytes = getline( &b, &self.size, self.infile)
-
-#             # stop at first error or eof
-#             if (nbytes == -1): break
-#             # skip comments
-#             if (b[0] == '#'): continue
-
-#             # skip empty lines
-#             if b[0] == '\0' or b[0] == '\n' or b[0] == '\r': continue
-
-#             # make sure that entry is complete
-#             if b[nbytes-1] != '\n' and b[nbytes-1] != '\r':
-#                 result = b
-#                 raise ValueError( "incomplete line at %s" % result )
-
-#             # make sure that this goes fully through C
-#             # otherwise buffer is copied to/from a
-#             # Python object causing segfaults as
-#             # the wrong memory is freed
-#             return self.parser.parse( b, nbytes )
-
-#         raise StopIteration
-
-#     def __dealloc__(self):
-#         free(self.buffer)
-
-#     def __next__(self):
-#         return self.__cnext__()
 
 #########################################################
 #########################################################
@@ -1111,11 +1032,11 @@ def tabix_index(filename,
 
 
 cdef class tabix_file_iterator:
-    '''iterate over a compressed or uncompressed ``infile``.
-    '''
+    """iterate over a compressed or uncompressed ``infile``.
+    """
 
-    def __cinit__(self, 
-                  infile, 
+    def __cinit__(self,
+                  infile,
                   Parser parser,
                   int buffer_size=65536):
 
@@ -1131,20 +1052,20 @@ cdef class tabix_file_iterator:
         self.duplicated_fd = dup(fd)
 
         # From the manual:
-        # gzopen can be used to read a file which is not in gzip format; 
-        # in this case gzread will directly read from the file without decompression. 
-        # When reading, this will be detected automatically by looking 
-        # for the magic two-byte gzip header. 
+        # gzopen can be used to read a file which is not in gzip format;
+        # in this case gzread will directly read from the file without decompression.
+        # When reading, this will be detected automatically by looking
+        # for the magic two-byte gzip header.
         self.fh = bgzf_dopen(self.duplicated_fd, 'r')
 
-        if self.fh == NULL: 
+        if self.fh == NULL:
             raise IOError('%s' % strerror(errno))
 
-        self.kstream = ks_init(self.fh) 
-        
+        self.kstream = ks_init(self.fh)
+
         self.buffer.s = <char*>malloc(buffer_size)
-        #if self.buffer == NULL:
-        #    raise MemoryError( "tabix_file_iterator: could not allocate %i bytes" % buffer_size)
+        if self.buffer.s == NULL:
+            raise MemoryError("tabix_file_iterator: could not allocate %i bytes" % buffer_size)
         #self.size = buffer_size
         self.parser = parser
 
@@ -1158,20 +1079,20 @@ cdef class tabix_file_iterator:
         cdef int retval = 0
         while 1:
             with nogil:
-                retval = ks_getuntil(self.kstream, '\n', &self.buffer, &dret)
-            
-            if retval < 0: 
+                retval = ks_getuntil(self.kstream, b'\n', &self.buffer, &dret)
+
+            if retval < 0:
                 break
-                #raise IOError('gzip error: %s' % buildGzipError( self.fh ))
+                #raise IOError('gzip error: %s' % buildGzipError(self.fh))
 
             b = self.buffer.s
-            
+
             # skip comments
-            if (b[0] == '#'):
+            if b[0] == b'#':
                 continue
 
             # skip empty lines
-            if b[0] == '\0' or b[0] == '\n' or b[0] == '\r':
+            if b[0] == b'\0' or b[0] == b'\n' or b[0] == b'\r':
                 continue
 
             # gzgets terminates at \n, no need to test
@@ -1185,19 +1106,16 @@ cdef class tabix_file_iterator:
         free(self.buffer.s)
         ks_destroy(self.kstream)
         bgzf_close(self.fh)
-        
+
     def __next__(self):
         return self.__cnext__()
 
-    def next(self):
-        return self.__cnext__()
-    
 
 class tabix_generic_iterator:
-    '''iterate over ``infile``.
-    
+    """iterate over ``infile``.
+
     Permits the use of file-like objects for example from the gzip module.
-    '''
+    """
     def __init__(self, infile, parser):
 
         self.infile = infile
@@ -1210,7 +1128,7 @@ class tabix_generic_iterator:
 
     # cython version - required for python 3
     def __next__(self):
-        
+
         cdef char * b
         cdef char * cpy
         cdef size_t nbytes
@@ -1227,39 +1145,35 @@ class tabix_generic_iterator:
             line = self.infile.readline()
             if not line:
                 break
-            
+
             s = force_bytes(line, encoding)
             b = s
             nbytes = len(line)
-            assert b[nbytes] == '\0'
+            assert b[nbytes] == b'\0'
 
             # skip comments
-            if b[0] == '#':
+            if b[0] == b'#':
                 continue
 
             # skip empty lines
-            if b[0] == '\0' or b[0] == '\n' or b[0] == '\r':
+            if b[0] == b'\0' or b[0] == b'\n' or b[0] == b'\r':
                 continue
-            
+
             # make sure that entry is complete
-            if b[nbytes-1] != '\n' and b[nbytes-1] != '\r':
+            if b[nbytes-1] != b'\n' and b[nbytes-1] != b'\r':
                 raise ValueError("incomplete line at %s" % line)
-            
+
             bytes_cpy = <bytes> b
             cpy = <char *> bytes_cpy
 
-            return self.parser(cpy, nbytes)            
+            return self.parser(cpy, nbytes)
 
         raise StopIteration
 
-    # python version - required for python 2.7
-    def next(self):
-        return self.__next__()
-    
 
 def tabix_iterator(infile, parser):
     """return an iterator over all entries in a file.
-    
+
     Results are returned parsed as specified by the *parser*. If
     *parser* is None, the results are returned as an unparsed string.
     Otherwise, *parser* is assumed to be a functor that will return
@@ -1268,30 +1182,12 @@ def tabix_iterator(infile, parser):
 
     """
     return tabix_generic_iterator(infile, parser)
-        
-    # file objects can use C stdio
-    # used to be: isinstance( infile, file):
-    # if PY_MAJOR_VERSION >= 3:
-    #     if isinstance( infile, io.IOBase ):
-    #         return tabix_copy_iterator( infile, parser )
-    #     else:
-    #         return tabix_generic_iterator( infile, parser )
-    # else:
-#        if isinstance( infile, file ):
-#            return tabix_copy_iterator( infile, parser )
-#        else:
-#            return tabix_generic_iterator( infile, parser )
-    
-cdef class Tabixfile(TabixFile):
-    """Tabixfile is deprecated: use TabixFile instead"""
-    pass
 
 
 __all__ = [
-    "tabix_index", 
+    "tabix_index",
     "tabix_compress",
     "TabixFile",
-    "Tabixfile",
     "asTuple",
     "asGTF",
     "asGFF3",
@@ -1299,7 +1195,7 @@ __all__ = [
     "asBed",
     "GZIterator",
     "GZIteratorHead",
-    "tabix_iterator", 
-    "tabix_generic_iterator", 
-    "tabix_file_iterator", 
+    "tabix_iterator",
+    "tabix_generic_iterator",
+    "tabix_file_iterator",
 ]

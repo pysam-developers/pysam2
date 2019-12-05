@@ -1,3 +1,5 @@
+# cython: language_level=3, embedsignature=True, profile=True
+
 from pysam.libchtslib cimport *
 
 cdef extern from "htslib_util.h":

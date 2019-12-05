@@ -1,3 +1,5 @@
+# cython: language_level=3, embedsignature=True, profile=True
+
 #cdef extern from "Python.h":
 #    ctypedef struct FILE
 

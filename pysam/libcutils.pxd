@@ -1,3 +1,5 @@
+# cython: language_level=3, embedsignature=True, profile=True
+
 #########################################################################
 # Utility functions used across pysam
 #########################################################################

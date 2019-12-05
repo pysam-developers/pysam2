@@ -1,5 +1,5 @@
-# cython: embedsignature=True
-# cython: profile=True
+# cython: language_level=3, embedsignature=True, profile=True
+
 # adds doc-strings for sphinx
 
 ########################################################################
@@ -294,31 +294,6 @@ cdef class HFile(object):
 
 ########################################################################
 ########################################################################
-## Helpers for backward compatibility to hide the difference between
-## boolean properties and methods
-########################################################################
-
-class CallableValue(object):
-    def __init__(self, value):
-        self.value = value
-    def __call__(self):
-        return self.value
-    def __bool__(self):
-        return self.value
-    def __nonzero__(self):
-        return self.value
-    def __eq__(self, other):
-        return self.value == other
-    def __ne__(self, other):
-        return self.value != other
-
-
-CTrue = CallableValue(True)
-CFalse = CallableValue(False)
-
-
-########################################################################
-########################################################################
 ## HTSFile wrapper class (base class for AlignmentFile and VariantFile)
 ########################################################################
 
@@ -420,7 +395,7 @@ cdef class HTSFile(object):
     @property
     def is_open(self):
         """return True if HTSFile is open and in a valid state."""
-        return CTrue if self.htsfile != NULL else CFalse
+        return self.htsfile != NULL
 
     @property
     def is_closed(self):

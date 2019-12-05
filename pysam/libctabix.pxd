@@ -1,3 +1,5 @@
+# cython: language_level=3, embedsignature=True, profile=True
+
 from libc.stdint cimport int8_t, int16_t, int32_t, int64_t
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdlib cimport malloc, calloc, realloc, free
@@ -120,8 +122,3 @@ cdef class GZIteratorHead(GZIterator):
 
 cdef class GZIteratorParsed(GZIterator):
     cdef Parser parser
-
-
-# Compatibility Layer for pysam < 0.8
-cdef class Tabixfile(TabixFile):
-    pass

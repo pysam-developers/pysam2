@@ -1,6 +1,4 @@
-# cython: embedsignature=True
-# cython: profile=True
-###############################################################################
+# cython: language_level=3, embedsignature=True, profile=True
 ###############################################################################
 # Cython wrapper for SAM/BAM/CRAM files based on htslib
 ###############################################################################
@@ -67,7 +65,7 @@ from pysam.libcutils cimport qualitystring_to_array, parse_region
 
 cdef class FastqProxy
 cdef makeFastqProxy(kseq_t * src):
-    '''enter src into AlignedRead.'''
+    """enter src into AlignedRead."""
     cdef FastqProxy dest = FastqProxy.__new__(FastqProxy)
     dest._delegate = src
     return dest
@@ -76,8 +74,7 @@ cdef makeFastqProxy(kseq_t * src):
 ##        add automatic indexing.
 ##        add function to get sequence names.
 cdef class FastaFile:
-    """Random access to fasta formatted files that
-    have been indexed by :term:`faidx`.
+    """Random access to fasta formatted files that have been indexed by :term:`faidx`.
 
     The file is automatically opened. The index file of file
     ``<filename>`` is expected to be called ``<filename>.fai``.
@@ -106,7 +103,6 @@ cdef class FastaFile:
         if file could not be opened
 
     """
-
     def __cinit__(self, *args, **kwargs):
         self.fastafile = NULL
         self._filename = None
@@ -116,7 +112,7 @@ cdef class FastaFile:
         self._open(*args, **kwargs)
 
     def is_open(self):
-        '''return true if samfile has been opened.'''
+        """return true if samfile has been opened."""
         return self.fastafile != NULL
 
     def __len__(self):
@@ -126,11 +122,11 @@ cdef class FastaFile:
         return faidx_nseq(self.fastafile)
 
     def _open(self, filename, filepath_index=None, filepath_index_compressed=None):
-        '''open an indexed fasta file.
+        """open an indexed fasta file.
 
         This method expects an indexed fasta file.
-        '''
 
+        """
         # close a previously opened file
         if self.fastafile != NULL:
             self.close()
@@ -140,7 +136,7 @@ cdef class FastaFile:
         cdef char *cindexname = NULL
         cdef char *cindexname_compressed = NULL
         self.is_remote = hisremote(cfilename)
-        
+
         # open file for reading
         if (self._filename != b"-"
             and not self.is_remote
@@ -158,7 +154,7 @@ cdef class FastaFile:
             if not os.path.exists(filepath_index):
                 raise IOError("filename {} does not exist".format(filepath_index))
             cindexname = bindex_filename = encode_filename(filepath_index)
-            
+
             if filepath_index_compressed:
                 if not os.path.exists(filepath_index_compressed):
                     raise IOError("filename {} does not exist".format(filepath_index_compressed))
@@ -206,33 +202,38 @@ cdef class FastaFile:
         self.close()
         return False
 
-    property closed:
+    @property
+    def closed(self):
         """bool indicating the current state of the file object.
+
         This is a read-only attribute; the close() method changes the value.
+
         """
-        def __get__(self):
-            return not self.is_open()
+        return not self.is_open()
 
-    property filename:
+    @property
+    def filename(self):
         """filename associated with this object. This is a read-only attribute."""
-        def __get__(self):
-            return self._filename
+        return self._filename
 
-    property references:
-        '''tuple with the names of :term:`reference` sequences.'''
-        def __get__(self):
-            return self._references
+    @property
+    def references(self):
+        """tuple with the names of :term:`reference` sequences."""
+        return self._references
 
-    property nreferences:
-        """int with the number of :term:`reference` sequences in the file.
-        This is a read-only attribute."""
-        def __get__(self):
-            return len(self._references) if self.references else None
+    @property
+    def nreferences(self):
+        """number of :term:`reference` sequences in the file.
 
-    property lengths:
+        This is a read-only attribute.
+
+        """
+        return len(self._references) if self.references else None
+
+    @property
+    def lengths(self):
         """tuple with the lengths of :term:`reference` sequences."""
-        def __get__(self):
-            return self._lengths
+        return self._lengths
 
     def fetch(self,
               reference=None,
@@ -271,9 +272,8 @@ cdef class FastaFile:
             if the region is invalid
 
         """
-
         if not self.is_open():
-            raise ValueError("I/O operation on closed file" )
+            raise ValueError("I/O operation on closed file")
 
         cdef int length
         cdef char *seq
@@ -317,8 +317,7 @@ cdef class FastaFile:
             free(seq)
 
     cdef char *_fetch(self, char *reference, int start, int end, int *length) except? NULL:
-        '''fetch sequence for reference, start and end'''
-
+        """fetch sequence for reference, start and end."""
         cdef char *seq
         with nogil:
             seq = faidx_fetch_seq(self.fastafile,
@@ -336,45 +335,41 @@ cdef class FastaFile:
         return seq
 
     def get_reference_length(self, reference):
-        '''return the length of reference.'''
+        """length of reference."""
         return self.reference2length[reference]
 
     def __getitem__(self, reference):
         return self.fetch(reference)
 
     def __contains__(self, reference):
-        '''return true if reference in fasta file.'''
+        """True if reference in fasta file."""
         return reference in self.reference2length
 
 
 cdef class FastqProxy:
     """A single entry in a fastq file."""
-    def __init__(self): pass
-
-    property name:
+    @property
+    def name(self):
         """The name of each entry in the fastq file."""
-        def __get__(self):
-            return charptr_to_str(self._delegate.name.s)
+        return charptr_to_str(self._delegate.name.s)
 
-    property sequence:
+    @property
+    def sequence(self):
         """The sequence of each entry in the fastq file."""
-        def __get__(self):
-            return charptr_to_str(self._delegate.seq.s)
+        return charptr_to_str(self._delegate.seq.s)
 
-    property comment:
-        def __get__(self):
-            if self._delegate.comment.l:
-                return charptr_to_str(self._delegate.comment.s)
-            else:
-                return None
+    @property
+    def comment(self):
+        if not self._delegate.comment.l:
+            return None
+        return charptr_to_str(self._delegate.comment.s)
 
-    property quality:
+    @property
+    def quality(self):
         """The quality score of each entry in the fastq file, represented as a string."""
-        def __get__(self):
-            if self._delegate.qual.l:
-                return charptr_to_str(self._delegate.qual.s)
-            else:
-                return None
+        if not self._delegate.qual.l:
+            return None
+        return charptr_to_str(self._delegate.qual.s)
 
     cdef cython.str to_string(self):
         if self.comment is None:
@@ -387,12 +382,12 @@ cdef class FastqProxy:
         else:
             return "@%s%s\n%s\n+\n%s" % (self.name, comment,
                                          self.sequence, self.quality)
-    
+
     def __str__(self):
         return self.to_string()
 
     cpdef array.array get_quality_array(self, int offset=33):
-        '''return quality values as integer array after subtracting offset.'''
+        """return quality values as integer array after subtracting offset."""
         if self.quality is None:
             return None
         return qualitystring_to_array(force_bytes(self.quality),
@@ -434,7 +429,7 @@ cdef class FastxRecord:
 
         if self.sequence is None:
             raise ValueError("can not write record without a sequence")
-        
+
         if self.comment is None:
             comment = ""
         else:
@@ -445,19 +440,18 @@ cdef class FastxRecord:
         else:
             return "@%s%s\n%s\n+\n%s" % (self.name, comment,
                                          self.sequence, self.quality)
-        
+
+    # FIXME: upgrade into properties
     def set_name(self, name):
         if name is None:
             raise ValueError("FastxRecord must have a name and not None")
         self.name = name
 
     def set_comment(self, comment):
-        self.comment = comment    
-        
-    def set_sequence(self, sequence, quality=None):
-        """set sequence of this record.
+        self.comment = comment
 
-        """
+    def set_sequence(self, sequence, quality=None):
+        """set sequence of this record."""
         self.sequence = sequence
         if quality is not None:
             if len(sequence) != len(quality):
@@ -472,7 +466,7 @@ cdef class FastxRecord:
         return self.to_string()
 
     cpdef array.array get_quality_array(self, int offset=33):
-        '''return quality values as array after subtracting offset.'''
+        """return quality values as array after subtracting offset."""
         if self.quality is None:
             return None
         return qualitystring_to_array(force_bytes(self.quality),
@@ -530,12 +524,13 @@ cdef class FastxFile:
         self.entry = NULL
         self._open(*args, **kwargs)
 
+    @property
     def is_open(self):
-        '''return true if samfile has been opened.'''
+        """True if samfile has been opened."""
         return self.entry != NULL
 
     def _open(self, filename, persist=True):
-        '''open a fastq/fasta file in *filename*
+        """open a fastq/fasta file in *filename*
 
         Paramentes
         ----------
@@ -546,7 +541,7 @@ cdef class FastxFile:
             True).  The copy will persist even if the iteration
             on the file continues.
 
-        '''
+        """
         if self.fastqfile != NULL:
             self.close()
 
@@ -568,7 +563,7 @@ cdef class FastxFile:
         self._filename = filename
 
     def close(self):
-        '''close the file.'''
+        """close the file."""
         if self.fastqfile != NULL:
             bgzf_close(self.fastqfile)
             self.fastqfile = NULL
@@ -590,20 +585,22 @@ cdef class FastxFile:
         self.close()
         return False
 
-    property closed:
+    @property
+    def closed(self):
         """bool indicating the current state of the file object.
-        This is a read-only attribute; the close() method changes the value.
-        """
-        def __get__(self):
-            return not self.is_open()
 
-    property filename:
+        This is a read-only attribute; the close() method changes the value.
+
+        """
+        return not self.is_open
+
+    @property
+    def filename(self):
         """string with the filename associated with this object."""
-        def __get__(self):
-            return self._filename
+        return self._filename
 
     def __iter__(self):
-        if not self.is_open():
+        if not self.is_open:
             raise ValueError("I/O operation on closed file")
         return self
 
@@ -611,15 +608,12 @@ cdef class FastxFile:
         return self.entry
 
     cdef int cnext(self):
-        '''C version of iterator
-        '''
+        """C version of iterator."""
         with nogil:
             return kseq_read(self.entry)
 
     def __next__(self):
-        """
-        python version of next().
-        """
+        """python version of next()."""
         cdef int l
         with nogil:
             l = kseq_read(self.entry)

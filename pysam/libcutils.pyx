@@ -1,3 +1,5 @@
+# cython: language_level=3, embedsignature=True, profile=True
+
 import types
 import sys
 import string

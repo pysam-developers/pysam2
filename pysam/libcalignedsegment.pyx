@@ -1,6 +1,4 @@
-# cython: embedsignature=True
-# cython: profile=True
-###############################################################################
+# cython: language_level=3, embedsignature=True, profile=True
 ###############################################################################
 # Cython wrapper for SAM/BAM/CRAM files based on htslib
 ###############################################################################
@@ -113,11 +111,11 @@ cdef inline uint8_t toupper(uint8_t ch):
 
 
 cdef inline uint8_t strand_mark_char(uint8_t ch, bam1_t *b):
-    if ch == '=':
+    if ch == b'=':
         if bam_is_rev(b):
-            return ','
+            return b','
         else:
-            return '.'
+            return b'.'
     else:
         if bam_is_rev(b):
             return tolower(ch)
@@ -138,8 +136,9 @@ cdef inline bint pileup_base_qual_skip(bam_pileup1_t * p, uint32_t threshold):
 
 cdef inline char map_typecode_htslib_to_python(uint8_t s):
     """map an htslib typecode to the corresponding python typecode
-    to be used in the struct or array modules."""
+    to be used in the struct or array modules.
 
+    """
     # map type from htslib to python array
     cdef char * f = strchr(htslib_types, s)
 
@@ -149,7 +148,7 @@ cdef inline char map_typecode_htslib_to_python(uint8_t s):
 
 
 cdef inline uint8_t map_typecode_python_to_htslib(char s):
-    """determine value type from type code of array"""
+    """determine value type from type code of array."""
     cdef char * f = strchr(parray_types, s)
     if f == NULL:
         return 0
@@ -181,7 +180,9 @@ cdef inline void update_bin(bam1_t * src):
 # optional tag data manipulation
 cdef convert_binary_tag(uint8_t * tag):
     """return bytesize, number of values and array of values
-    in aux_data memory location pointed to by tag."""
+    in aux_data memory location pointed to by tag.
+
+    """
     cdef uint8_t auxtype
     cdef uint8_t byte_size
     cdef int32_t nvalues
@@ -208,7 +209,9 @@ cdef convert_binary_tag(uint8_t * tag):
 
 
 cdef inline uint8_t get_tag_typecode(value, value_type=None):
-    """guess type code for a *value*. If *value_type* is None, the type
+    """guess type code for a *value*.
+
+    If *value_type* is None, the type
     code will be inferred based on the Python type of *value*
 
     """
@@ -219,29 +222,27 @@ cdef inline uint8_t get_tag_typecode(value, value_type=None):
         if isinstance(value, int):
             if value < 0:
                 if value >= INT8_MIN:
-                    typecode = 'c'
+                    typecode = b'c'
                 elif value >= INT16_MIN:
-                    typecode = 's'
+                    typecode = b's'
                 elif value >= INT32_MIN:
-                    typecode = 'i'
+                    typecode = b'i'
             # unsigned ints
             else:
                 if value <= UINT8_MAX:
-                    typecode = 'C'
+                    typecode = b'C'
                 elif value <= UINT16_MAX:
-                    typecode = 'S'
+                    typecode = b'S'
                 elif value <= UINT32_MAX:
-                    typecode = 'I'
+                    typecode = b'I'
         elif isinstance(value, float):
-            typecode = 'f'
+            typecode = b'f'
         elif isinstance(value, str):
-            typecode = 'Z'
+            typecode = b'Z'
         elif isinstance(value, bytes):
-            typecode = 'Z'
-        elif isinstance(value, array.array) or \
-                isinstance(value, list) or \
-                isinstance(value, tuple):
-            typecode = 'B'
+            typecode = b'Z'
+        elif isinstance(value, array.array) or isinstance(value, list) or isinstance(value, tuple):
+            typecode = b'B'
     else:
         if value_type in 'aAsSIcCZidfH':
             typecode = force_bytes(value_type)[0]
@@ -250,7 +251,7 @@ cdef inline uint8_t get_tag_typecode(value, value_type=None):
 
 
 cdef inline uint8_t get_btag_typecode(value, min_value=None, max_value=None):
-    '''returns the value typecode of a value.
+    """returns the value typecode of a value.
 
     If max is specified, the appropriate type is returned for a range
     where value is the minimum.
@@ -258,15 +259,14 @@ cdef inline uint8_t get_btag_typecode(value, min_value=None, max_value=None):
     Note that this method returns types from the extended BAM alphabet
     of types that includes tags that are not part of the SAM
     specification.
-    '''
 
-
+    """
     cdef uint8_t typecode
 
     t = type(value)
 
     if t is float:
-        typecode = 'f'
+        typecode = b'f'
     elif t is int:
         if max_value is None:
             max_value = value
@@ -275,11 +275,11 @@ cdef inline uint8_t get_btag_typecode(value, min_value=None, max_value=None):
         # signed ints
         if min_value < 0:
             if min_value >= INT8_MIN and max_value <= INT8_MAX:
-                typecode = 'c'
+                typecode = b'c'
             elif min_value >= INT16_MIN and max_value <= INT16_MAX:
-                typecode = 's'
+                typecode = b's'
             elif min_value >= INT32_MIN or max_value <= INT32_MAX:
-                typecode = 'i'
+                typecode = b'i'
             else:
                 raise ValueError(
                     "at least one signed integer out of range of "
@@ -287,11 +287,11 @@ cdef inline uint8_t get_btag_typecode(value, min_value=None, max_value=None):
         # unsigned ints
         else:
             if max_value <= UINT8_MAX:
-                typecode = 'C'
+                typecode = b'C'
             elif max_value <= UINT16_MAX:
-                typecode = 'S'
+                typecode = b'S'
             elif max_value <= UINT32_MAX:
-                typecode = 'I'
+                typecode = b'I'
             else:
                 raise ValueError(
                     "at least one integer out of range of BAM/SAM specification")
@@ -300,9 +300,9 @@ cdef inline uint8_t get_btag_typecode(value, min_value=None, max_value=None):
         if t is not bytes:
             value = value.encode('ascii')
         if len(value) == 1:
-            typecode = 'A'
+            typecode = b'A'
         else:
-            typecode = 'Z'
+            typecode = b'Z'
 
     return typecode
 
@@ -329,6 +329,7 @@ cdef inline pack_tags(tags):
 
     Returns a format string and the associated list of arguments to be
     used in a call to struct.pack_into.
+
     """
     fmts, args = ["<"], []
 
@@ -398,16 +399,16 @@ cdef inline pack_tags(tags):
                 if typecode == 0:
                     raise ValueError("could not deduce typecode for value {}".format(value))
 
-            if typecode == 'a' or typecode == 'A' or typecode == 'Z' or typecode == 'H':
+            if typecode == b'a' or typecode == b'A' or typecode == b'Z' or typecode == b'H':
                 value = force_bytes(value)
 
-            if typecode == "a":
-                typecode = 'A'
+            if typecode == b'a':
+                typecode = b'A'
 
-            if typecode == 'Z' or typecode == 'H':
-                datafmt = "2sB%is" % (len(value)+1)
+            if typecode == b'Z' or typecode == b'H':
+                datafmt = '2sB%is' % (len(value)+1)
             else:
-                datafmt = "2sB%s" % DATATYPE2FORMAT[typecode][0]
+                datafmt = '2sB%s' % DATATYPE2FORMAT[typecode][0]
 
             args.extend([pytag[:2],
                          typecode,
@@ -424,8 +425,8 @@ cdef inline int32_t calculateQueryLengthWithoutHardClipping(bam1_t * src):
     Length ignores hard-clipped bases.
 
     Return 0 if there is no CIGAR alignment.
-    """
 
+    """
     cdef uint32_t * cigar_p = pysam_bam_get_cigar(src)
 
     if cigar_p == NULL:
@@ -454,8 +455,8 @@ cdef inline int32_t calculateQueryLengthWithHardClipping(bam1_t * src):
     Length includes hard-clipped bases.
 
     Return 0 if there is no CIGAR alignment.
-    """
 
+    """
     cdef uint32_t * cigar_p = pysam_bam_get_cigar(src)
 
     if cigar_p == NULL:
@@ -531,9 +532,7 @@ cdef inline int32_t getQueryEnd(bam1_t *src) except -1:
 cdef inline bytes getSequenceInRange(bam1_t *src,
                                      uint32_t start,
                                      uint32_t end):
-    """return python string of the sequence in a bam1_t object.
-    """
-
+    """return python string of the sequence in a bam1_t object."""
     cdef uint8_t * p
     cdef uint32_t k
     cdef char * s
@@ -548,7 +547,7 @@ cdef inline bytes getSequenceInRange(bam1_t *src,
     for k from start <= k < end:
         # equivalent to seq_nt16_str[bam1_seqi(s, i)] (see bam.c)
         # note: do not use string literal as it will be a python string
-        s[k-start] = seq_nt16_str[p[k/2] >> 4 * (1 - k%2) & 0xf]
+        s[k-start] = seq_nt16_str[p[k//2] >> 4 * (1 - k%2) & 0xf]
 
     return charptr_to_bytes(seq)
 
@@ -556,8 +555,7 @@ cdef inline bytes getSequenceInRange(bam1_t *src,
 cdef inline object getQualitiesInRange(bam1_t *src,
                                        uint32_t start,
                                        uint32_t end):
-    """return python array of quality values from a bam1_t object"""
-
+    """return python array of quality values from a bam1_t object."""
     cdef uint8_t * p
     cdef uint32_t k
 
@@ -580,7 +578,7 @@ cdef inline object getQualitiesInRange(bam1_t *src,
 cdef class AlignedSegment
 cdef AlignedSegment makeAlignedSegment(bam1_t *src,
                                        AlignmentHeader header):
-    '''return an AlignedSegment object constructed from `src`'''
+    """return an AlignedSegment object constructed from `src`."""
     # note that the following does not call __init__
     cdef AlignedSegment dest = AlignedSegment.__new__(AlignedSegment)
     dest._delegate = bam_dup1(src)
@@ -596,10 +594,12 @@ cdef PileupColumn makePileupColumn(bam_pileup1_t ** plp,
                       uint32_t min_base_quality,
                       char * reference_sequence,
                       AlignmentHeader header):
-    '''return a PileupColumn object constructed from pileup in `plp` and
-    setting additional attributes.
+    """return a PileupColumn object.
 
-    '''
+    It is constructed from pileup in `plp` and setting additional
+    attributes.
+
+    """
     # note that the following does not call __init__
     cdef PileupColumn dest = PileupColumn.__new__(PileupColumn)
     dest.header = header
@@ -618,7 +618,7 @@ cdef PileupColumn makePileupColumn(bam_pileup1_t ** plp,
 cdef class PileupRead
 cdef PileupRead makePileupRead(bam_pileup1_t *src,
                                AlignmentHeader header):
-    '''return a PileupRead object construted from a bam_pileup1_t * object.'''
+    """return a PileupRead object construted from a bam_pileup1_t * object."""
     # note that the following does not call __init__
     cdef PileupRead dest = PileupRead.__new__(PileupRead)
     dest._alignment = makeAlignedSegment(src.b, header)
@@ -664,7 +664,7 @@ cdef inline uint32_t get_md_reference_length(char * md_tag):
         else:
             l += nmatches
             nmatches = 0
-            if md_tag[md_idx] == '^':
+            if md_tag[md_idx] == b'^':
                 md_idx += 1
                 while md_tag[md_idx] >= 65 and md_tag[md_idx] <= 90:
                     md_idx += 1
@@ -739,7 +739,7 @@ cdef inline bytes build_alignment_sequence(bam1_t * src):
                 s_idx += 1
         elif op == BAM_CDEL:
             for i from 0 <= i < l:
-                s[s_idx] = '-'
+                s[s_idx] = b'-'
                 s_idx += 1
         elif op == BAM_CREF_SKIP:
             pass
@@ -769,7 +769,7 @@ cdef inline bytes build_alignment_sequence(bam1_t * src):
     cdef int insertions = 0
 
     while s[s_idx] != 0:
-        if s[s_idx] >= 'a':
+        if s[s_idx] >= b'a':
             insertions += 1
         s_idx += 1
     s_idx = 0
@@ -790,15 +790,15 @@ cdef inline bytes build_alignment_sequence(bam1_t * src):
         else:
             # save matches up to this point, skipping insertions
             for x from 0 <= x < nmatches:
-                while s[s_idx] >= 'a':
+                while s[s_idx] >= b'a':
                     s_idx += 1
                 s_idx += 1
-            while s[s_idx] >= 'a':
+            while s[s_idx] >= b'a':
                 s_idx += 1
 
             r_idx += nmatches
             nmatches = 0
-            if md_tag[md_idx] == '^':
+            if md_tag[md_idx] == b'^':
                 md_idx += 1
                 while md_tag[md_idx] >= 65 and md_tag[md_idx] <= 90:
                     # assert s[s_idx] == '-'
@@ -818,10 +818,10 @@ cdef inline bytes build_alignment_sequence(bam1_t * src):
 
     # save matches up to this point, skipping insertions
     for x from 0 <= x < nmatches:
-        while s[s_idx] >= 'a':
+        while s[s_idx] >= b'a':
             s_idx += 1
         s_idx += 1
-    while s[s_idx] >= 'a':
+    while s[s_idx] >= b'a':
         s_idx += 1
 
     seq = PyBytes_FromStringAndSize(s, s_idx)
@@ -885,7 +885,7 @@ cdef inline bytes build_reference_sequence(bam1_t * src):
 
 
 cdef class AlignedSegment:
-    '''Class representing an aligned segment.
+    """Class representing an aligned segment.
 
     This class stores a handle to the samtools C-structure representing
     an aligned read. Member read access is forwarded to the C-structure
@@ -909,8 +909,8 @@ cdef class AlignedSegment:
          :class:`~pysam.AlignmentHeader` object to map numerical
          identifiers to chromosome names. If not given, an empty
          header is created.
-    '''
 
+    """
     # Now only called when instances are created from Python
     def __init__(self, AlignmentHeader header=None):
         # see bam_init1
@@ -954,6 +954,7 @@ cdef class AlignedSegment:
         Similarly, the tags field is returned in its parsed state.
 
         To get a valid SAM record, use :meth:`to_string`.
+
         """
         # sam-parsing is done in sam.c/bam_format1_core which
         # requires a valid header.
@@ -977,9 +978,7 @@ cdef class AlignedSegment:
         return makeAlignedSegment(self._delegate, self.header)
 
     def compare(self, AlignedSegment other):
-        '''return -1,0,1, if contents in this are binary
-        <,=,> to *other*
-        '''
+        """return -1,0,1, if contents in this are binary <,=,> to *other*."""
 
         cdef int retval, x
         cdef bam1_t *t
@@ -992,10 +991,12 @@ cdef class AlignedSegment:
         # cdef unsigned char * oo, * tt
         # tt = <unsigned char*>(&t.core)
         # oo = <unsigned char*>(&o.core)
-        # for x from 0 <= x < sizeof( bam1_core_t): print x, tt[x], oo[x]
+        # for x from 0 <= x < sizeof( bam1_core_t):
+        #     print x, tt[x], oo[x]
         # tt = <unsigned char*>(t.data)
         # oo = <unsigned char*>(o.data)
-        # for x from 0 <= x < max(t.l_data, o.l_data): print x, tt[x], oo[x], chr(tt[x]), chr(oo[x])
+        # for x from 0 <= x < max(t.l_data, o.l_data):
+        #     print x, tt[x], oo[x], chr(tt[x]), chr(oo[x])
 
         # Fast-path test for object identity
         if t == o:
@@ -1042,6 +1043,7 @@ cdef class AlignedSegment:
 
         The output format is valid SAM format if a header is associated
         with the AlignedSegment.
+
         """
         cdef kstring_t line
         line.l = line.m = 0
@@ -1117,90 +1119,95 @@ cdef class AlignedSegment:
 
     ########################################################
     ## Basic attributes in order of appearance in SAM format
-    property query_name:
-        """the query template name (None if not present)"""
-        def __get__(self):
+    @property
+    def query_name(self):
+        """the query template name or None if not present."""
+        cdef bam1_t * src = self._delegate
+        if src.core.l_qname == 0:
+            return None
 
-            cdef bam1_t * src = self._delegate
-            if src.core.l_qname == 0:
-                return None
+        return charptr_to_str(<char *>pysam_bam_get_qname(src))
 
-            return charptr_to_str(<char *>pysam_bam_get_qname(src))
+    @query_name.setter
+    def query_name(self, qname):
 
-        def __set__(self, qname):
+        if qname is None or len(qname) == 0:
+            return
 
-            if qname is None or len(qname) == 0:
-                return
+        # See issue #447
+        # (The threshold is 252 chars, but this includes a \0 byte.
+        if len(qname) > 251:
+            raise ValueError("query length out of range {} > 251".format(
+                len(qname)))
 
-            # See issue #447
-            # (The threshold is 252 chars, but this includes a \0 byte.
-            if len(qname) > 251:
-                raise ValueError("query length out of range {} > 251".format(
-                    len(qname)))
+        qname = force_bytes(qname)
+        cdef bam1_t * src = self._delegate
+        # the qname is \0 terminated
+        cdef uint8_t l = len(qname) + 1
 
-            qname = force_bytes(qname)
-            cdef bam1_t * src = self._delegate
-            # the qname is \0 terminated
-            cdef uint8_t l = len(qname) + 1
+        cdef char * p = pysam_bam_get_qname(src)
+        cdef uint8_t l_extranul = 0
 
-            cdef char * p = pysam_bam_get_qname(src)
-            cdef uint8_t l_extranul = 0
+        if l % 4 != 0:
+            l_extranul = 4 - l % 4
 
-            if l % 4 != 0:
-                l_extranul = 4 - l % 4
+        cdef bam1_t * retval = pysam_bam_update(src,
+                                                src.core.l_qname,
+                                                l + l_extranul,
+                                                <uint8_t*>p)
+        if retval == NULL:
+            raise MemoryError("could not allocate memory")
 
-            cdef bam1_t * retval = pysam_bam_update(src,
-                                                    src.core.l_qname,
-                                                    l + l_extranul,
-                                                    <uint8_t*>p)
-            if retval == NULL:
-                raise MemoryError("could not allocate memory")
+        src.core.l_extranul = l_extranul
+        src.core.l_qname = l + l_extranul
 
-            src.core.l_extranul = l_extranul
-            src.core.l_qname = l + l_extranul
+        # re-acquire pointer to location in memory
+        # as it might have moved
+        p = pysam_bam_get_qname(src)
 
-            # re-acquire pointer to location in memory
-            # as it might have moved
-            p = pysam_bam_get_qname(src)
+        strncpy(p, qname, l)
+        # x might be > 255
+        cdef uint16_t x = 0
 
-            strncpy(p, qname, l)
-            # x might be > 255
-            cdef uint16_t x = 0
+        for x from l <= x < l + l_extranul:
+            p[x] = b'\0'
 
-            for x from l <= x < l + l_extranul:
-                p[x] = '\0'
+    @property
+    def flag(self):
+        """properties flag."""
+        return self._delegate.core.flag
 
-    property flag:
-        """properties flag"""
-        def __get__(self):
-            return self._delegate.core.flag
-        def __set__(self, flag):
-            self._delegate.core.flag = flag
+    @flag.setter
+    def flag(self, flag):
+        self._delegate.core.flag = flag
 
-    property reference_name:
+    @property
+    def reference_name(self):
         """:term:`reference` name"""
-        def __get__(self):
-            if self._delegate.core.tid == -1:
-                return None
-            if self.header:
-                return self.header.get_reference_name(self._delegate.core.tid)
-            else:
-                raise ValueError("reference_name unknown if no header associated with record")
-        def __set__(self, reference):
-            cdef int tid
-            if reference is None or reference == "*":
-                self._delegate.core.tid = -1
-            elif self.header:
-                tid = self.header.get_tid(reference)
-                if tid < 0:
-                    raise ValueError("reference {} does not exist in header".format(
-                        reference))
-                self._delegate.core.tid = tid
-            else:
-                raise ValueError("reference_name can not be set if no header associated with record")
+        if self._delegate.core.tid == -1:
+            return None
+        if self.header:
+            return self.header.get_reference_name(self._delegate.core.tid)
+        else:
+            raise ValueError("reference_name unknown if no header associated with record")
 
-    property reference_id:
-        """:term:`reference` ID
+    @reference_name.setter
+    def reference_name(self, reference):
+        cdef int tid
+        if reference is None or reference == "*":
+            self._delegate.core.tid = -1
+        elif self.header:
+            tid = self.header.get_tid(reference)
+            if tid < 0:
+                raise ValueError("reference {} does not exist in header".format(
+                    reference))
+            self._delegate.core.tid = tid
+        else:
+            raise ValueError("reference_name can not be set if no header associated with record")
+
+    @property
+    def reference_id(self):
+        """:term:`reference` ID.
 
         .. note::
 
@@ -1209,34 +1216,40 @@ cdef class AlignedSegment:
             reference sequence, use :meth:`get_reference_name()`
 
         """
-        def __get__(self):
-            return self._delegate.core.tid
-        def __set__(self, tid):
-            if tid != -1 and self.header and not self.header.is_valid_tid(tid):
-                raise ValueError("reference id {} does not exist in header".format(
-                    tid))
-            self._delegate.core.tid = tid
+        return self._delegate.core.tid
 
-    property reference_start:
-        """0-based leftmost coordinate"""
-        def __get__(self):
-            return self._delegate.core.pos
-        def __set__(self, pos):
-            ## setting the position requires updating the "bin" attribute
-            cdef bam1_t * src
-            src = self._delegate
-            src.core.pos = pos
-            update_bin(src)
+    @reference_id.setter
+    def reference_id(self, tid):
+        if tid != -1 and self.header and not self.header.is_valid_tid(tid):
+            raise ValueError("reference id {} does not exist in header".format(
+                tid))
+        self._delegate.core.tid = tid
 
-    property mapping_quality:
-        """mapping quality"""
-        def __get__(self):
-            return pysam_get_qual(self._delegate)
-        def __set__(self, qual):
-            pysam_set_qual(self._delegate, qual)
+    @property
+    def reference_start(self):
+        """0-based leftmost reference coordinate."""
+        return self._delegate.core.pos
 
-    property cigarstring:
-        '''the :term:`cigar` alignment as a string.
+    @reference_start.setter
+    def reference_start(self, pos):
+        ## setting the position requires updating the "bin" attribute
+        cdef bam1_t * src
+        src = self._delegate
+        src.core.pos = pos
+        update_bin(src)
+
+    @property
+    def mapping_quality(self):
+        """mapping quality."""
+        return pysam_get_qual(self._delegate)
+
+    @mapping_quality.setter
+    def mapping_quality(self, qual):
+        pysam_set_qual(self._delegate, qual)
+
+    @property
+    def cigarstring(self):
+        """the :term:`cigar` alignment as a string.
 
         The cigar string is a string of alternating integers
         and characters denoting the length and the type of
@@ -1251,71 +1264,80 @@ cdef class AlignedSegment:
 
         To unset the cigarstring, assign None or the
         empty string.
-        '''
-        def __get__(self):
-            c = self.cigartuples
-            if c is None:
-                return None
-            # reverse order
-            else:
-                return "".join([ "%i%c" % (y,CODE2CIGAR[x]) for x,y in c])
 
-        def __set__(self, cigar):
-            if cigar is None or len(cigar) == 0:
-                self.cigartuples = []
-            else:
-                parts = CIGAR_REGEX.findall(cigar)
-                # reverse order
-                self.cigartuples = [(CIGAR2CODE[ord(y)], int(x)) for x,y in parts]
+        """
+        c = self.cigartuples
+        if c is None:
+            return None
+
+        return "".join("%i%c" % (y, CODE2CIGAR[x]) for x, y in c)
+
+    @cigarstring.setter
+    def cigarstring(self, cigar):
+        if not cigar:
+            self.cigartuples = []
+            return
+
+        parts = CIGAR_REGEX.findall(cigar)
+        self.cigartuples = [(CIGAR2CODE[ord(y)], int(x)) for x, y in parts]
 
     # TODO
     # property cigar:
     #     """the cigar alignment"""
 
-    property next_reference_id:
+    @property
+    def next_reference_id(self):
         """the :term:`reference` id of the mate/next read."""
-        def __get__(self):
-            return self._delegate.core.mtid
-        def __set__(self, mtid):
-            if mtid != -1 and self.header and not self.header.is_valid_tid(mtid):
-                raise ValueError("reference id {} does not exist in header".format(
-                    mtid))
+        return self._delegate.core.mtid
+
+    @next_reference_id.setter
+    def next_reference_id(self, mtid):
+        if mtid != -1 and self.header and not self.header.is_valid_tid(mtid):
+            raise ValueError("reference id {} does not exist in header".format(
+                mtid))
+        self._delegate.core.mtid = mtid
+
+    @property
+    def next_reference_name(self):
+        """:term:`reference` name of the mate/next read.
+
+        Returns None if no AlignmentFile is associated)
+
+        """
+        if self._delegate.core.mtid == -1:
+            return None
+        if self.header:
+            return self.header.get_reference_name(self._delegate.core.mtid)
+        else:
+            raise ValueError("next_reference_name unknown if no header associated with record")
+
+    @next_reference_name.setter
+    def next_reference_name(self, reference):
+        cdef int mtid
+        if reference is None or reference == "*":
+            self._delegate.core.mtid = -1
+        elif reference == "=":
+            self._delegate.core.mtid = self._delegate.core.tid
+        elif self.header:
+            mtid = self.header.get_tid(reference)
+            if mtid < 0:
+                raise ValueError("reference {} does not exist in header".format(
+                    reference))
             self._delegate.core.mtid = mtid
+        else:
+            raise ValueError("next_reference_name can not be set if no header associated with record")
 
-    property next_reference_name:
-        """:term:`reference` name of the mate/next read (None if no
-        AlignmentFile is associated)"""
-        def __get__(self):
-            if self._delegate.core.mtid == -1:
-                return None
-            if self.header:
-                return self.header.get_reference_name(self._delegate.core.mtid)
-            else:
-                raise ValueError("next_reference_name unknown if no header associated with record")
-
-        def __set__(self, reference):
-            cdef int mtid
-            if reference is None or reference == "*":
-                self._delegate.core.mtid = -1
-            elif reference == "=":
-                self._delegate.core.mtid = self._delegate.core.tid
-            elif self.header:
-                mtid = self.header.get_tid(reference)
-                if mtid < 0:
-                    raise ValueError("reference {} does not exist in header".format(
-                        reference))
-                self._delegate.core.mtid = mtid
-            else:
-                raise ValueError("next_reference_name can not be set if no header associated with record")
-
-    property next_reference_start:
+    @property
+    def next_reference_start(self):
         """the position of the mate/next read."""
-        def __get__(self):
-            return self._delegate.core.mpos
-        def __set__(self, mpos):
-            self._delegate.core.mpos = mpos
+        return self._delegate.core.mpos
 
-    property query_length:
+    @next_reference_start.setter
+    def next_reference_start(self, mpos):
+        self._delegate.core.mpos = mpos
+
+    @property
+    def query_length(self):
         """the length of the query/read.
 
         This value corresponds to the length of the sequence supplied
@@ -1333,19 +1355,22 @@ cdef class AlignedSegment:
         Returns 0 if not available.
 
         """
-        def __get__(self):
-            return self._delegate.core.l_qseq
+        return self._delegate.core.l_qseq
 
-    property template_length:
-        """the observed query template length"""
-        def __get__(self):
-            return self._delegate.core.isize
-        def __set__(self, isize):
-            self._delegate.core.isize = isize
+    @property
+    def template_length(self):
+        """the observed query template length."""
+        return self._delegate.core.isize
 
-    property query_sequence:
-        """read sequence bases, including :term:`soft clipped` bases
-        (None if not present).
+    @template_length.setter
+    def template_length(self, isize):
+        self._delegate.core.isize = isize
+
+    @property
+    def query_sequence(self):
+        """read sequence bases, including :term:`soft clipped` bases.
+
+        None is returned if not present.
 
         Note that assigning to seq will invalidate any quality scores.
         Thus, to in-place edit the sequence and quality scores, copies of
@@ -1358,79 +1383,79 @@ cdef class AlignedSegment:
         The sequence is returned as it is stored in the BAM file. Some mappers
         might have stored a reverse complement of the original read
         sequence.
+
         """
-        def __get__(self):
-            if self.cache_query_sequence:
-                return self.cache_query_sequence
-
-            cdef bam1_t * src
-            cdef char * s
-            src = self._delegate
-
-            if src.core.l_qseq == 0:
-                return None
-
-            self.cache_query_sequence = force_str(getSequenceInRange(
-                src, 0, src.core.l_qseq))
+        if self.cache_query_sequence:
             return self.cache_query_sequence
 
-        def __set__(self, seq):
-            # samtools manages sequence and quality length memory together
-            # if no quality information is present, the first byte says 0xff.
-            cdef bam1_t * src
-            cdef uint8_t * p
-            cdef char * s
-            cdef int l, k
-            cdef Py_ssize_t nbytes_new, nbytes_old
+        cdef bam1_t * src
+        cdef char * s
+        src = self._delegate
 
-            if seq == None:
-                l = 0
-            else:
-                l = len(seq)
-                seq = force_bytes(seq)
+        if src.core.l_qseq == 0:
+            return None
 
-            src = self._delegate
+        self.cache_query_sequence = force_str(getSequenceInRange(
+            src, 0, src.core.l_qseq))
+        return self.cache_query_sequence
 
-            # as the sequence is stored in half-bytes, the total length (sequence
-            # plus quality scores) is (l+1)/2 + l
-            nbytes_new = (l + 1) / 2 + l
-            nbytes_old = (src.core.l_qseq + 1) / 2 + src.core.l_qseq
+    @query_sequence.setter
+    def query_sequence(self, seq):
+        # samtools manages sequence and quality length memory together
+        # if no quality information is present, the first byte says 0xff.
+        cdef bam1_t * src
+        cdef bam1_t * retval
+        cdef uint8_t * p
+        cdef char * s
+        cdef int l, k
+        cdef Py_ssize_t nbytes_new, nbytes_old
 
-            # acquire pointer to location in memory
+        if seq == None:
+            l = 0
+        else:
+            l = len(seq)
+            seq = force_bytes(seq)
+
+        src = self._delegate
+
+        # as the sequence is stored in half-bytes, the total length (sequence
+        # plus quality scores) is (l+1)//2 + l
+        nbytes_new = (l + 1) // 2 + l
+        nbytes_old = (src.core.l_qseq + 1) // 2 + src.core.l_qseq
+
+        # acquire pointer to location in memory
+        p = pysam_bam_get_seq(src)
+        src.core.l_qseq = l
+
+        # change length of data field
+        retval = pysam_bam_update(src, nbytes_old, nbytes_new, p)
+
+        if retval == NULL:
+            raise MemoryError("could not allocate memory")
+
+        if l > 0:
+            # re-acquire pointer to location in memory
+            # as it might have moved
             p = pysam_bam_get_seq(src)
-            src.core.l_qseq = l
+            for k from 0 <= k < nbytes_new:
+                p[k] = 0
+            # convert to C string
+            s = seq
+            for k from 0 <= k < l:
+                p[k//2] |= seq_nt16_table[<unsigned char>s[k]] << 4 * (1 - k % 2)
 
-            # change length of data field
-            cdef bam1_t * retval = pysam_bam_update(src,
-                                                    nbytes_old,
-                                                    nbytes_new,
-                                                    p)
+            # erase qualities
+            p = pysam_bam_get_qual(src)
+            p[0] = 0xff
 
-            if retval == NULL:
-                raise MemoryError("could not allocate memory")
+        self.cache_query_sequence = force_str(seq)
 
-            if l > 0:
-                # re-acquire pointer to location in memory
-                # as it might have moved
-                p = pysam_bam_get_seq(src)
-                for k from 0 <= k < nbytes_new:
-                    p[k] = 0
-                # convert to C string
-                s = seq
-                for k from 0 <= k < l:
-                    p[k/2] |= seq_nt16_table[<unsigned char>s[k]] << 4 * (1 - k % 2)
+        # clear cached values for quality values
+        self.cache_query_qualities = None
+        self.cache_query_alignment_qualities = None
 
-                # erase qualities
-                p = pysam_bam_get_qual(src)
-                p[0] = 0xff
-
-            self.cache_query_sequence = force_str(seq)
-
-            # clear cached values for quality values
-            self.cache_query_qualities = None
-            self.cache_query_alignment_qualities = None
-
-    property query_qualities:
+    @property
+    def query_qualities(self):
         """read sequence base qualities, including :term:`soft
         clipped` bases (None if not present).
 
@@ -1447,64 +1472,64 @@ cdef class AlignedSegment:
         quality scores and the sequence are not the same.
 
         """
-        def __get__(self):
-
-            if self.cache_query_qualities:
-                return self.cache_query_qualities
-
-            cdef bam1_t * src
-            cdef char * q
-
-            src = self._delegate
-
-            if src.core.l_qseq == 0:
-                return None
-
-            self.cache_query_qualities = getQualitiesInRange(src, 0, src.core.l_qseq)
+        if self.cache_query_qualities:
             return self.cache_query_qualities
 
-        def __set__(self, qual):
+        cdef bam1_t * src
+        cdef char * q
 
-            # note that memory is already allocated via setting the sequence
-            # hence length match of sequence and quality needs is checked.
-            cdef bam1_t * src
-            cdef uint8_t * p
-            cdef int l
+        src = self._delegate
 
-            src = self._delegate
-            p = pysam_bam_get_qual(src)
-            if qual is None or len(qual) == 0:
-                # if absent and there is a sequence: set to 0xff
-                if src.core.l_qseq != 0:
-                    p[0] = 0xff
-                return
+        if src.core.l_qseq == 0:
+            return None
 
-            # check for length match
-            l = len(qual)
-            if src.core.l_qseq != l:
-                raise ValueError(
-                    "quality and sequence mismatch: %i != %i" %
-                    (l, src.core.l_qseq))
+        self.cache_query_qualities = getQualitiesInRange(src, 0, src.core.l_qseq)
+        return self.cache_query_qualities
 
-            # create a python array object filling it
-            # with the quality scores
+    @query_qualities.setter
+    def query_qualities(self, qual):
+        # note that memory is already allocated via setting the sequence
+        # hence length match of sequence and quality needs is checked.
+        cdef bam1_t * src
+        cdef uint8_t * p
+        cdef int l
 
-            # NB: should avoid this copying if qual is
-            # already of the correct type.
-            cdef c_array.array result = c_array.array('B', qual)
+        src = self._delegate
+        p = pysam_bam_get_qual(src)
+        if qual is None or len(qual) == 0:
+            # if absent and there is a sequence: set to 0xff
+            if src.core.l_qseq != 0:
+                p[0] = 0xff
+            return
 
-            # copy data
-            memcpy(p, result.data.as_voidptr, l)
+        # check for length match
+        l = len(qual)
+        if src.core.l_qseq != l:
+            raise ValueError(
+                "quality and sequence mismatch: %i != %i" %
+                (l, src.core.l_qseq))
 
-            # save in cache
-            self.cache_query_qualities = qual
+        # create a python array object filling it
+        # with the quality scores
 
-    property bin:
-        """properties bin"""
-        def __get__(self):
-            return self._delegate.core.bin
-        def __set__(self, bin):
-            self._delegate.core.bin = bin
+        # NB: should avoid this copying if qual is
+        # already of the correct type.
+        cdef c_array.array result = c_array.array('B', qual)
+
+        # copy data
+        memcpy(p, result.data.as_voidptr, l)
+
+        # save in cache
+        self.cache_query_qualities = qual
+
+    @property
+    def bin(self):
+        """genomic bin associated with this alignment."""
+        return self._delegate.core.bin
+
+    @bin.setter
+    def bin(self, value):
+        self._delegate.core.bin = value
 
 
     ##########################################################
@@ -1513,113 +1538,149 @@ cdef class AlignedSegment:
     ##########################################################
     # 1. Flags
     ##########################################################
-    property is_paired:
-        """true if read is paired in sequencing"""
-        def __get__(self):
-            return (self.flag & BAM_FPAIRED) != 0
-        def __set__(self,val):
-            pysam_update_flag(self._delegate, val, BAM_FPAIRED)
+    @property
+    def is_paired(self):
+        """True if read is paired in sequencing."""
+        return (self.flag & BAM_FPAIRED) != 0
 
-    property is_proper_pair:
-        """true if read is mapped in a proper pair"""
-        def __get__(self):
-            return (self.flag & BAM_FPROPER_PAIR) != 0
-        def __set__(self,val):
-            pysam_update_flag(self._delegate, val, BAM_FPROPER_PAIR)
-    property is_unmapped:
-        """true if read itself is unmapped"""
-        def __get__(self):
-            return (self.flag & BAM_FUNMAP) != 0
-        def __set__(self, val):
-            pysam_update_flag(self._delegate, val, BAM_FUNMAP)
-            # setting the unmapped flag requires recalculation of
-            # bin as alignment length is now implicitely 1
-            update_bin(self._delegate)
+    @is_paired.setter
+    def is_paired(self,val):
+        pysam_update_flag(self._delegate, val, BAM_FPAIRED)
 
-    property mate_is_unmapped:
-        """true if the mate is unmapped"""
-        def __get__(self):
-            return (self.flag & BAM_FMUNMAP) != 0
-        def __set__(self,val):
-            pysam_update_flag(self._delegate, val, BAM_FMUNMAP)
-    property is_reverse:
-        """true if read is mapped to reverse strand"""
-        def __get__(self):
-            return (self.flag & BAM_FREVERSE) != 0
-        def __set__(self,val):
-            pysam_update_flag(self._delegate, val, BAM_FREVERSE)
-    property mate_is_reverse:
-        """true is read is mapped to reverse strand"""
-        def __get__(self):
-            return (self.flag & BAM_FMREVERSE) != 0
-        def __set__(self,val):
-            pysam_update_flag(self._delegate, val, BAM_FMREVERSE)
-    property is_read1:
-        """true if this is read1"""
-        def __get__(self):
-            return (self.flag & BAM_FREAD1) != 0
-        def __set__(self,val):
-            pysam_update_flag(self._delegate, val, BAM_FREAD1)
-    property is_read2:
-        """true if this is read2"""
-        def __get__(self):
-            return (self.flag & BAM_FREAD2) != 0
-        def __set__(self, val):
-            pysam_update_flag(self._delegate, val, BAM_FREAD2)
-    property is_secondary:
-        """true if not primary alignment"""
-        def __get__(self):
-            return (self.flag & BAM_FSECONDARY) != 0
-        def __set__(self, val):
-            pysam_update_flag(self._delegate, val, BAM_FSECONDARY)
-    property is_qcfail:
-        """true if QC failure"""
-        def __get__(self):
-            return (self.flag & BAM_FQCFAIL) != 0
-        def __set__(self, val):
-            pysam_update_flag(self._delegate, val, BAM_FQCFAIL)
-    property is_duplicate:
-        """true if optical or PCR duplicate"""
-        def __get__(self):
-            return (self.flag & BAM_FDUP) != 0
-        def __set__(self, val):
-            pysam_update_flag(self._delegate, val, BAM_FDUP)
-    property is_supplementary:
-        """true if this is a supplementary alignment"""
-        def __get__(self):
-            return (self.flag & BAM_FSUPPLEMENTARY) != 0
-        def __set__(self, val):
-            pysam_update_flag(self._delegate, val, BAM_FSUPPLEMENTARY)
+    @property
+    def is_proper_pair(self):
+        """True if read is mapped in a proper pair."""
+        return (self.flag & BAM_FPROPER_PAIR) != 0
+
+    @is_proper_pair.setter
+    def is_proper_pair(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FPROPER_PAIR)
+
+    @property
+    def is_unmapped(self):
+        """True if read itself is unmapped."""
+        return (self.flag & BAM_FUNMAP) != 0
+
+    @is_unmapped.setter
+    def is_unmapped(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FUNMAP)
+        # setting the unmapped flag requires recalculation of
+        # bin as alignment length is now implicitely 1
+        update_bin(self._delegate)
+
+    @property
+    def mate_is_unmapped(self):
+        """True if the mate is unmapped."""
+        return (self.flag & BAM_FMUNMAP) != 0
+
+    @mate_is_unmapped.setter
+    def mate_is_unmapped(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FMUNMAP)
+
+    @property
+    def is_reverse(self):
+        """True if read is mapped to reverse strand."""
+        return (self.flag & BAM_FREVERSE) != 0
+
+    @is_reverse.setter
+    def is_reverse(self,val):
+        pysam_update_flag(self._delegate, val, BAM_FREVERSE)
+
+    @property
+    def mate_is_reverse(self):
+        """True is read is mapped to reverse strand."""
+        return (self.flag & BAM_FMREVERSE) != 0
+
+    @mate_is_reverse.setter
+    def mate_is_reverse(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FMREVERSE)
+
+    @property
+    def is_read1(self):
+        """true if this is read1."""
+        return (self.flag & BAM_FREAD1) != 0
+
+    @is_read1.setter
+    def is_read1(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FREAD1)
+
+    @property
+    def is_read2(self):
+        """true if this is read2."""
+        return (self.flag & BAM_FREAD2) != 0
+
+    @is_read2.setter
+    def is_read2(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FREAD2)
+
+    @property
+    def is_secondary(self):
+        """true if not primary alignment."""
+        return (self.flag & BAM_FSECONDARY) != 0
+
+    @is_secondary.setter
+    def is_secondary(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FSECONDARY)
+
+    @property
+    def is_qcfail(self):
+        """true if QC failure."""
+        return (self.flag & BAM_FQCFAIL) != 0
+
+    @is_qcfail.setter
+    def is_qcfail(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FQCFAIL)
+
+    @property
+    def is_duplicate(self):
+        """true if optical or PCR duplicate."""
+        return (self.flag & BAM_FDUP) != 0
+
+    @is_duplicate.setter
+    def is_duplicate(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FDUP)
+
+    @property
+    def is_supplementary(self):
+        """true if this is a supplementary alignment."""
+        return (self.flag & BAM_FSUPPLEMENTARY) != 0
+
+    @is_supplementary.setter
+    def is_supplementary(self, val):
+        pysam_update_flag(self._delegate, val, BAM_FSUPPLEMENTARY)
 
     # 2. Coordinates and lengths
-    property reference_end:
-        '''aligned reference position of the read on the reference genome.
+    @property
+    def reference_end(self):
+        """aligned reference position of the read on the reference genome.
 
         reference_end points to one past the last aligned residue.
         Returns None if not available (read is unmapped or no cigar
         alignment present).
 
-        '''
-        def __get__(self):
-            cdef bam1_t * src
-            src = self._delegate
-            if (self.flag & BAM_FUNMAP) or pysam_get_n_cigar(src) == 0:
-                return None
-            return bam_endpos(src)
+        """
+        cdef bam1_t * src
+        src = self._delegate
+        if (self.flag & BAM_FUNMAP) or pysam_get_n_cigar(src) == 0:
+            return None
+        return bam_endpos(src)
 
-    property reference_length:
-        '''aligned length of the read on the reference genome.
+    @property
+    def reference_length(self):
+        """aligned length of the read on the reference genome.
 
-        This is equal to `aend - pos`. Returns None if not available.'''
-        def __get__(self):
-            cdef bam1_t * src
-            src = self._delegate
-            if (self.flag & BAM_FUNMAP) or pysam_get_n_cigar(src) == 0:
-                return None
-            return bam_endpos(src) - \
-                self._delegate.core.pos
+        This is equal to `aend - pos`. Returns None if not available.
 
-    property query_alignment_sequence:
+        """
+        cdef bam1_t * src
+        src = self._delegate
+        if (self.flag & BAM_FUNMAP) or pysam_get_n_cigar(src) == 0:
+            return None
+        return bam_endpos(src) - \
+            self._delegate.core.pos
+
+    @property
+    def reference_length(self):
         """aligned portion of the read.
 
         This is a substring of :attr:`seq` that excludes flanking
@@ -1635,28 +1696,29 @@ cdef class AlignedSegment:
         may have been retained.
 
         """
-
-        def __get__(self):
-            if self.cache_query_alignment_sequence:
-                return self.cache_query_alignment_sequence
-
-            cdef bam1_t * src
-            cdef uint32_t start, end
-
-            src = self._delegate
-
-            if src.core.l_qseq == 0:
-                return None
-
-            start = getQueryStart(src)
-            end   = getQueryEnd(src)
-
-            self.cache_query_alignment_sequence = force_str(
-                getSequenceInRange(src, start, end))
+        if self.cache_query_alignment_sequence:
             return self.cache_query_alignment_sequence
 
-    property query_alignment_qualities:
-        """aligned query sequence quality values (None if not present). These
+        cdef bam1_t * src
+        cdef uint32_t start, end
+
+        src = self._delegate
+
+        if src.core.l_qseq == 0:
+            return None
+
+        start = getQueryStart(src)
+        end   = getQueryEnd(src)
+
+        self.cache_query_alignment_sequence = force_str(
+            getSequenceInRange(src, start, end))
+        return self.cache_query_alignment_sequence
+
+    @property
+    def query_alignment_qualities(self):
+        """aligned query sequence quality values (None if not present).
+
+        These
         are the quality values that correspond to :attr:`query`, that
         is, they exclude qualities of :term:`soft clipped` bases. This
         is equal to ``qual[qstart:qend]``.
@@ -1669,59 +1731,61 @@ cdef class AlignedSegment:
         This property is read-only.
 
         """
-        def __get__(self):
-
-            if self.cache_query_alignment_qualities:
-                return self.cache_query_alignment_qualities
-
-            cdef bam1_t * src
-            cdef uint32_t start, end
-
-            src = self._delegate
-
-            if src.core.l_qseq == 0:
-                return None
-
-            start = getQueryStart(src)
-            end   = getQueryEnd(src)
-            self.cache_query_alignment_qualities = \
-                getQualitiesInRange(src, start, end)
+        if self.cache_query_alignment_qualities:
             return self.cache_query_alignment_qualities
 
-    property query_alignment_start:
+        cdef bam1_t * src
+        cdef uint32_t start, end
+
+        src = self._delegate
+
+        if src.core.l_qseq == 0:
+            return None
+
+        start = getQueryStart(src)
+        end   = getQueryEnd(src)
+
+        self.cache_query_alignment_qualities = getQualitiesInRange(src, start, end)
+        return self.cache_query_alignment_qualities
+
+    @property
+    def query_alignment_start(self):
         """start index of the aligned query portion of the sequence (0-based,
         inclusive).
 
         This the index of the first base in :attr:`seq` that is not
         soft-clipped.
-        """
-        def __get__(self):
-            return getQueryStart(self._delegate)
 
-    property query_alignment_end:
+        """
+        return getQueryStart(self._delegate)
+
+    @property
+    def query_alignment_end(self):
         """end index of the aligned query portion of the sequence (0-based,
         exclusive)
 
         This the index just past the last base in :attr:`seq` that is not
         soft-clipped.
-        """
-        def __get__(self):
-            return getQueryEnd(self._delegate)
 
-    property query_alignment_length:
+        """
+        return getQueryEnd(self._delegate)
+
+    @property
+    def query_alignment_length(self):
         """length of the aligned query sequence.
 
-        This is equal to :attr:`qend` - :attr:`qstart`"""
-        def __get__(self):
-            cdef bam1_t * src
-            src = self._delegate
-            return getQueryEnd(src) - getQueryStart(src)
+        This is equal to :attr:`qend` - :attr:`qstart`
+
+        """
+        cdef bam1_t * src
+        src = self._delegate
+        return getQueryEnd(src) - getQueryStart(src)
 
     #####################################################
     # Computed properties
 
     def get_reference_positions(self, full_length=False):
-        """a list of reference positions that this read aligns to.
+        """list of reference positions to which this read is aligned.
 
         By default, this method only returns positions in the
         reference that are within the alignment. If *full_length* is
@@ -1768,6 +1832,7 @@ cdef class AlignedSegment:
         including hard-clipped bases.
 
         Returns None if CIGAR alignment is not present.
+
         """
         cdef int32_t l = calculateQueryLengthWithHardClipping(self._delegate)
         if l > 0:
@@ -1791,6 +1856,7 @@ cdef class AlignedSegment:
         complemented.
 
         Returns None if the record has no query sequence.
+
         """
         if self.query_sequence is None:
             return None
@@ -1803,6 +1869,7 @@ cdef class AlignedSegment:
         """return base qualities of the read sequence.
 
         Reads mapping to the reverse strand will be reversed.
+
         """
         if self.is_reverse:
             return self.query_qualities[::-1]
@@ -1846,7 +1913,6 @@ cdef class AlignedSegment:
         # read sequence, cigar and MD tag are consistent.
 
         if _with_seq:
-            # force_str required for py2/py3 compatibility
             ref_seq = force_str(build_reference_sequence(src))
             if ref_seq is None:
                 raise ValueError("MD tag not present")
@@ -1934,8 +2000,8 @@ cdef class AlignedSegment:
         might be directly adjacent. This happens if
         the two blocks are separated by an insertion
         in the read.
-        """
 
+        """
         cdef uint32_t k, pos, l
         cdef int op
         cdef uint32_t * cigar_p
@@ -1966,6 +2032,7 @@ cdef class AlignedSegment:
         *start* and *end* on the reference sequence.
 
         Return None if cigar alignment is not available.
+
         """
         cdef uint32_t k, i, pos, overlap
         cdef int op, o
@@ -2034,7 +2101,6 @@ cdef class AlignedSegment:
                 for each cigar operation.
 
         """
-
         cdef int nfields = NCIGAR_CODES + 1
 
         cdef c_array.array base_counts = array.array(
@@ -2070,9 +2136,11 @@ cdef class AlignedSegment:
     #####################################################
     ## Unsorted as yet
     # TODO: capture in CIGAR object
-    property cigartuples:
-        """the :term:`cigar` alignment. The alignment
-        is returned as a list of tuples of (operation, length).
+    @property
+    def query_alignment_start(self):
+        """query alignment start position.
+
+        The alignment is returned as a list of tuples of (operation, length).
 
         If the alignment is not present, None is returned.
 
@@ -2109,73 +2177,70 @@ cdef class AlignedSegment:
 
         To unset the cigar property, assign an empty list
         or None.
+
         """
-        def __get__(self):
-            cdef uint32_t * cigar_p
-            cdef bam1_t * src
-            cdef uint32_t op, l
-            cdef uint32_t k
+        cdef uint32_t * cigar_p
+        cdef bam1_t * src
+        cdef uint32_t op, l
+        cdef uint32_t k
 
-            src = self._delegate
-            if pysam_get_n_cigar(src) == 0:
-                return None
+        src = self._delegate
+        if pysam_get_n_cigar(src) == 0:
+            return None
 
-            cigar = []
+        cigar = []
 
-            cigar_p = pysam_bam_get_cigar(src);
-            for k from 0 <= k < pysam_get_n_cigar(src):
-                op = cigar_p[k] & BAM_CIGAR_MASK
-                l = cigar_p[k] >> BAM_CIGAR_SHIFT
-                cigar.append((op, l))
-            return cigar
+        cigar_p = pysam_bam_get_cigar(src);
+        for k from 0 <= k < pysam_get_n_cigar(src):
+            op = cigar_p[k] & BAM_CIGAR_MASK
+            l = cigar_p[k] >> BAM_CIGAR_SHIFT
+            cigar.append((op, l))
+        return cigar
 
-        def __set__(self, values):
-            cdef uint32_t * p
-            cdef bam1_t * src
-            cdef op, l
-            cdef int k
+    @query_alignment_start.setter
+    def query_alignment_start(self, values):
+        cdef uint32_t * p
+        cdef bam1_t * src
+        cdef op, l
+        cdef int k
 
-            k = 0
+        k = 0
 
-            src = self._delegate
+        src = self._delegate
 
-            # get location of cigar string
-            p = pysam_bam_get_cigar(src)
+        # get location of cigar string
+        p = pysam_bam_get_cigar(src)
 
-            # empty values for cigar string
-            if values is None:
-                values = []
+        # empty values for cigar string
+        if values is None:
+            values = []
 
-            cdef uint32_t ncigar = len(values)
+        cdef uint32_t ncigar = len(values)
 
-            cdef bam1_t * retval = pysam_bam_update(src,
-                                                    pysam_get_n_cigar(src) * 4,
-                                                    ncigar * 4,
-                                                    <uint8_t*>p)
+        cdef bam1_t * retval = pysam_bam_update(src,
+                                                pysam_get_n_cigar(src) * 4,
+                                                ncigar * 4,
+                                                <uint8_t*>p)
 
-            if retval == NULL:
-                raise MemoryError("could not allocate memory")
+        if retval == NULL:
+            raise MemoryError("could not allocate memory")
 
-            # length is number of cigar operations, not bytes
-            pysam_set_n_cigar(src, ncigar)
+        # length is number of cigar operations, not bytes
+        pysam_set_n_cigar(src, ncigar)
 
-            # re-acquire pointer to location in memory
-            # as it might have moved
-            p = pysam_bam_get_cigar(src)
+        # re-acquire pointer to location in memory
+        # as it might have moved
+        p = pysam_bam_get_cigar(src)
 
-            # insert cigar operations
-            for op, l in values:
-                p[k] = l << BAM_CIGAR_SHIFT | op
-                k += 1
+        # insert cigar operations
+        for op, l in values:
+            p[k] = l << BAM_CIGAR_SHIFT | op
+            k += 1
 
-            ## setting the cigar string requires updating the bin
-            update_bin(src)
+        ## setting the cigar string requires updating the bin
+        update_bin(src)
 
-    cpdef set_tag(self,
-                  tag,
-                  value,
-                  value_type=None,
-                  replace=True):
+    cpdef set_tag(self, tag, value, value_type=None, replace=True):
         """sets a particular field *tag* to *value* in the optional alignment
         section.
 
@@ -2216,8 +2281,8 @@ cdef class AlignedSegment:
 
         Note that a single character string will be output as 'Z' and
         not 'A' as the former is the more general type.
-        """
 
+        """
         cdef int value_size
         cdef uint8_t tc
         cdef uint8_t * value_ptr
@@ -2254,54 +2319,54 @@ cdef class AlignedSegment:
                 value, value_type))
 
         # sam_format1 for typecasting
-        if typecode == 'Z':
+        if typecode == b'Z':
             value = force_bytes(value)
             value_ptr = <uint8_t*><char*>value
             value_size = len(value)+1
-        elif typecode == 'H':
+        elif typecode == b'H':
             # Note that hex tags are stored the very same
             # way as Z string.s
             value = force_bytes(value)
             value_ptr = <uint8_t*><char*>value
             value_size = len(value)+1
-        elif typecode == 'A' or typecode == 'a':
+        elif typecode == b'A' or typecode == b'a':
             value = force_bytes(value)
             value_ptr = <uint8_t*><char*>value
             value_size = sizeof(char)
-            typecode = 'A'
-        elif typecode == 'i':
+            typecode = b'A'
+        elif typecode == b'i':
             int32_t_value = value
             value_ptr = <uint8_t*>&int32_t_value
             value_size = sizeof(int32_t)
-        elif typecode == 'I':
+        elif typecode == b'I':
             uint32_t_value = value
             value_ptr = <uint8_t*>&uint32_t_value
             value_size = sizeof(uint32_t)
-        elif typecode == 's':
+        elif typecode == b's':
             int16_t_value = value
             value_ptr = <uint8_t*>&int16_t_value
             value_size = sizeof(int16_t)
-        elif typecode == 'S':
+        elif typecode == b'S':
             uint16_t_value = value
             value_ptr = <uint8_t*>&uint16_t_value
             value_size = sizeof(uint16_t)
-        elif typecode == 'c':
+        elif typecode == b'c':
             int8_t_value = value
             value_ptr = <uint8_t*>&int8_t_value
             value_size = sizeof(int8_t)
-        elif typecode == 'C':
+        elif typecode == b'C':
             uint8_t_value = value
             value_ptr = <uint8_t*>&uint8_t_value
             value_size = sizeof(uint8_t)
-        elif typecode == 'd':
+        elif typecode == b'd':
             double_value = value
             value_ptr = <uint8_t*>&double_value
             value_size = sizeof(double)
-        elif typecode == 'f':
+        elif typecode == b'f':
             float_value  = value
             value_ptr = <uint8_t*>&float_value
             value_size = sizeof(float)
-        elif typecode == 'B':
+        elif typecode == b'B':
             # the following goes through python, needs to be cleaned up
             # pack array using struct
             fmt, args = pack_tags([(tag, value, value_type)])
@@ -2332,8 +2397,7 @@ cdef class AlignedSegment:
                        value_ptr)
 
     cpdef has_tag(self, tag):
-        """returns true if the optional alignment section
-        contains a given *tag*."""
+        """returns true if the optional alignment section contains a given *tag*."""
         cdef uint8_t * v
         cdef int nvalues
         btag = force_bytes(tag)
@@ -2341,8 +2405,7 @@ cdef class AlignedSegment:
         return v != NULL
 
     cpdef get_tag(self, tag, with_value_type=False):
-        """
-        retrieves data from the optional alignment section
+        """retrieve data from the optional alignment section
         given a two-letter *tag* denoting the field.
 
         The returned value is cast into an appropriate python type.
@@ -2380,12 +2443,13 @@ cdef class AlignedSegment:
         v = bam_aux_get(self._delegate, btag)
         if v == NULL:
             raise KeyError("tag '%s' not present" % tag)
-        if chr(v[0]) == "B":
+
+        if chr(v[0]) == b'B':
             auxtype = chr(v[0]) + chr(v[1])
         else:
             auxtype = chr(v[0])
 
-        if auxtype in "iIcCsS":
+        if auxtype in b'iIcCsS':
             value = bam_aux2i(v)
         elif auxtype == 'f' or auxtype == 'F':
             value = bam_aux2f(v)
@@ -2393,14 +2457,14 @@ cdef class AlignedSegment:
             value = bam_aux2f(v)
         elif auxtype == 'A' or auxtype == 'a':
             # force A to a
-            v[0] = 'A'
+            v[0] = b'A'
             # there might a more efficient way
             # to convert a char into a string
             value = '%c' % <char>bam_aux2A(v)
-        elif auxtype == 'Z' or auxtype == 'H':
+        elif auxtype == b'Z' or auxtype == b'H':
             # Z and H are treated equally as strings in htslib
             value = charptr_to_str(<char*>bam_aux2Z(v))
-        elif auxtype[0] == 'B':
+        elif auxtype[0] == b'B':
             bytesize, nvalues, values = convert_binary_tag(v + 1)
             value = values
         else:
@@ -2430,7 +2494,6 @@ cdef class AlignedSegment:
         :meth:`get_tag` for a quicker way to achieve this.
 
         """
-
         cdef char * ctag
         cdef bam1_t * src
         cdef uint8_t * s
@@ -2451,29 +2514,29 @@ cdef class AlignedSegment:
             auxtag[1] = s[1]
             s += 2
             auxtype = s[0]
-            if auxtype in ('c', 'C'):
+            if auxtype in (b'c', b'C'):
                 value = <int>bam_aux2i(s)
                 s += 1
-            elif auxtype in ('s', 'S'):
+            elif auxtype in (b's', b'S'):
                 value = <int>bam_aux2i(s)
                 s += 2
-            elif auxtype in ('i', 'I'):
+            elif auxtype in (b'i', b'I'):
                 value = <int32_t>bam_aux2i(s)
                 s += 4
-            elif auxtype == 'f':
+            elif auxtype == b'f':
                 value = <float>bam_aux2f(s)
                 s += 4
-            elif auxtype == 'd':
+            elif auxtype == b'd':
                 value = <double>bam_aux2f(s)
                 s += 8
-            elif auxtype in ('A', 'a'):
+            elif auxtype in (b'A', b'a'):
                 value = "%c" % <char>bam_aux2A(s)
                 s += 1
-            elif auxtype in ('Z', 'H'):
+            elif auxtype in (b'Z', b'H'):
                 value = charptr_to_str(<char*>bam_aux2Z(s))
                 # +1 for NULL terminated string
                 s += len(value) + 1
-            elif auxtype == 'B':
+            elif auxtype == b'B':
                 s += 1
                 byte_size, nvalues, value = convert_binary_tag(s)
                 # 5 for 1 char and 1 int
@@ -2502,8 +2565,8 @@ cdef class AlignedSegment:
 
         This method will not enforce the rule that the same tag may appear
         only once in the optional alignment section.
-        """
 
+        """
         cdef bam1_t * src
         cdef uint8_t * s
         cdef char * temp
@@ -2548,14 +2611,15 @@ cdef class AlignedSegment:
 
 
 cdef class PileupColumn:
-    '''A pileup of reads at a particular reference sequence position
+    """A pileup of reads at a particular reference sequence position
     (:term:`column`). A pileup column contains all the reads that map
     to a certain target base.
 
     This class is a proxy for results returned by the samtools pileup
     engine.  If the underlying engine iterator advances, the results
     of this column will change.
-    '''
+
+    """
     def __init__(self):
         raise TypeError("this class cannot be instantiated from Python")
 
@@ -2571,85 +2635,60 @@ cdef class PileupColumn:
         free(self.buf.s)
 
     def set_min_base_quality(self, min_base_quality):
-        """set the minimum base quality for this pileup column.
-        """
+        """set the minimum base quality for this pileup column."""
         self.min_base_quality = min_base_quality
 
     def __len__(self):
         """return number of reads aligned to this column.
 
         see :meth:`get_num_aligned`
+
         """
         return self.get_num_aligned()
 
-    property reference_id:
-        '''the reference sequence number as defined in the header'''
-        def __get__(self):
-            return self.tid
+    @property
+    def reference_id(self):
+        """reference sequence number as defined in the header."""
+        return self.tid
 
-    property reference_name:
-        """:term:`reference` name (None if no AlignmentFile is associated)"""
-        def __get__(self):
-            if self.header is not None:
-                return self.header.get_reference_name(self.tid)
+    @property
+    def reference_name(self):
+        """:term:`reference` name (None if no AlignmentFile is associated)."""
+        if self.header is None:
             return None
 
-    property nsegments:
-        '''number of reads mapping to this column.
+        return self.header.get_reference_name(self.tid)
 
-        Note that this number ignores the base quality filter.'''
-        def __get__(self):
-            return self.n_pu
-        def __set__(self, n):
-            self.n_pu = n
+    @property
+    def reference_id(self):
+        """number of reads mapping to this column.
 
-    property reference_pos:
-        '''the position in the reference sequence (0-based).'''
-        def __get__(self):
-            return self.pos
-
-    property pileups:
-        '''list of reads (:class:`pysam.PileupRead`) aligned to this column'''
-        def __get__(self):
-            if self.plp == NULL or self.plp[0] == NULL:
-                raise ValueError("PileupColumn accessed after iterator finished")
-
-            cdef int x
-            cdef bam_pileup1_t * p = NULL
-            pileups = []
-
-            # warning: there could be problems if self.n and self.buf are
-            # out of sync.
-            for x from 0 <= x < self.n_pu:
-                p = &(self.plp[0][x])
-                if p == NULL:
-                    raise ValueError(
-                        "pileup buffer out of sync - most likely use of iterator "
-                        "outside loop")
-                if pileup_base_qual_skip(p, self.min_base_quality):
-                    continue
-                pileups.append(makePileupRead(p, self.header))
-            return pileups
-
-    ########################################################
-    # Compatibility Accessors
-    # Functions, properties for compatibility with pysam < 0.8
-    ########################################################
-    def get_num_aligned(self):
-        """return number of aligned bases at pileup column position.
-
-        This method applies a base quality filter and the number is
-        equal to the size of :meth:`get_query_sequences`,
-        :meth:`get_mapping_qualities`, etc.
+        Note that this number ignores the base quality filter.
 
         """
-        cdef uint32_t x = 0
-        cdef uint32_t c = 0
-        cdef uint32_t cnt = 0
-        cdef bam_pileup1_t * p = NULL
+        return self.n_pu
+
+    @reference_id.setter
+    def reference_id(self, n):
+        self.n_pu = n
+
+    @property
+    def reference_pos(self):
+        """the position in the reference sequence (0-based)."""
+        return self.pos
+
+    @property
+    def pileups(self):
+        """list of reads (:class:`pysam.PileupRead`) aligned to this column."""
         if self.plp == NULL or self.plp[0] == NULL:
             raise ValueError("PileupColumn accessed after iterator finished")
 
+        cdef int x
+        cdef bam_pileup1_t * p = NULL
+        pileups = []
+
+        # warning: there could be problems if self.n and self.buf are
+        # out of sync.
         for x from 0 <= x < self.n_pu:
             p = &(self.plp[0][x])
             if p == NULL:
@@ -2658,259 +2697,17 @@ cdef class PileupColumn:
                     "outside loop")
             if pileup_base_qual_skip(p, self.min_base_quality):
                 continue
-            cnt += 1
-        return cnt
-
-    def get_query_sequences(self, bint mark_matches=False, bint mark_ends=False, bint add_indels=False):
-        """query bases/sequences at pileup column position.
-
-        Optionally, the bases/sequences can be annotated according to the samtools
-        mpileup format. This is the format description from the samtools mpileup tool::
-
-           Information on match, mismatch, indel, strand, mapping
-           quality and start and end of a read are all encoded at the
-           read base column. At this column, a dot stands for a match
-           to the reference base on the forward strand, a comma for a
-           match on the reverse strand, a '>' or '<' for a reference
-           skip, `ACGTN' for a mismatch on the forward strand and
-           `acgtn' for a mismatch on the reverse strand. A pattern
-           `\\+[0-9]+[ACGTNacgtn]+' indicates there is an insertion
-           between this reference position and the next reference
-           position. The length of the insertion is given by the
-           integer in the pattern, followed by the inserted
-           sequence. Similarly, a pattern `-[0-9]+[ACGTNacgtn]+'
-           represents a deletion from the reference. The deleted bases
-           will be presented as `*' in the following lines. Also at
-           the read base column, a symbol `^' marks the start of a
-           read. The ASCII of the character following `^' minus 33
-           gives the mapping quality. A symbol `$' marks the end of a
-           read segment
-
-        To reproduce samtools mpileup format, set all of mark_matches,
-        mark_ends and add_indels to True.
-
-        Parameters
-        ----------
-
-        mark_matches: bool
-
-          If True, output bases matching the reference as "," or "."
-          for forward and reverse strand, respectively. This mark
-          requires the reference sequence. If no reference is
-          present, this option is ignored.
-
-        mark_ends : bool
-
-          If True, add markers "^" and "$" for read start and end, respectively.
-
-        add_indels : bool
-
-          If True, add bases for bases inserted into the reference and
-          'N's for base skipped from the reference. If a reference sequence
-          is given, add the actual bases.
-
-        Returns
-        -------
-
-        list: a list of bases/sequences per read at pileup column position.
-
-        """
-        cdef uint32_t x = 0
-        cdef uint32_t j = 0
-        cdef uint32_t c = 0
-        cdef uint8_t cc = 0
-        cdef uint8_t rb = 0
-        cdef kstring_t * buf = &self.buf
-        cdef bam_pileup1_t * p = NULL
-
-        if self.plp == NULL or self.plp[0] == NULL:
-            raise ValueError("PileupColumn accessed after iterator finished")
-
-        buf.l = 0
-
-        # todo: reference sequence to count matches/mismatches
-        # todo: convert assertions to exceptions
-        for x from 0 <= x < self.n_pu:
-            p = &(self.plp[0][x])
-            if p == NULL:
-                raise ValueError(
-                    "pileup buffer out of sync - most likely use of iterator "
-                    "outside loop")
-            if pileup_base_qual_skip(p, self.min_base_quality):
-                continue
-            # see samtools pileup_seq
-            if mark_ends and p.is_head:
-                kputc('^', buf)
-
-                if p.b.core.qual > 93:
-                    kputc(126, buf)
-                else:
-                    kputc(p.b.core.qual + 33, buf)
-            if not p.is_del:
-                if p.qpos < p.b.core.l_qseq:
-                    cc = <uint8_t>seq_nt16_str[bam_seqi(bam_get_seq(p.b), p.qpos)]
-                else:
-                    cc = 'N'
-
-                if mark_matches and self.reference_sequence != NULL:
-                    rb = self.reference_sequence[self.reference_pos]
-                    if seq_nt16_table[cc] == seq_nt16_table[rb]:
-                        cc = "="
-                kputc(strand_mark_char(cc, p.b), buf)
-            elif add_indels:
-                if p.is_refskip:
-                    if bam_is_rev(p.b):
-                        kputc('<', buf)
-                    else:
-                        kputc('>', buf)
-                else:
-                    kputc('*', buf)
-            if add_indels:
-                if p.indel > 0:
-                    kputc('+', buf)
-                    kputw(p.indel, buf)
-                    for j from 1 <= j <= p.indel:
-                        cc = seq_nt16_str[bam_seqi(bam_get_seq(p.b), p.qpos + j)]
-                        kputc(strand_mark_char(cc, p.b), buf)
-                elif p.indel < 0:
-                    kputc('-', buf)
-                    kputw(-p.indel, buf)
-                    for j from 1 <= j <= -p.indel:
-                        # TODO: out-of-range check here?
-                        if self.reference_sequence == NULL:
-                            cc = 'N'
-                        else:
-                            cc = self.reference_sequence[self.reference_pos + j]
-                        kputc(strand_mark_char(cc, p.b), buf)
-            if mark_ends and p.is_tail:
-                kputc('$', buf)
-
-            kputc(':', buf)
-
-        if buf.l == 0:
-            # could be zero if all qualities are too low
-            return ""
-        else:
-            # quicker to ensemble all and split than to encode all separately.
-            # ignore last ":"
-            return force_str(PyBytes_FromStringAndSize(buf.s, buf.l-1)).split(":")
-
-    def get_query_qualities(self):
-        """query base quality scores at pileup column position.
-
-        Returns
-        -------
-
-        list: a list of quality scores
-        """
-        cdef uint32_t x = 0
-        cdef bam_pileup1_t * p = NULL
-        cdef uint32_t c = 0
-        result = []
-        for x from 0 <= x < self.n_pu:
-            p = &(self.plp[0][x])
-            if p == NULL:
-                raise ValueError(
-                    "pileup buffer out of sync - most likely use of iterator "
-                    "outside loop")
-
-            if p.qpos < p.b.core.l_qseq:
-                c = bam_get_qual(p.b)[p.qpos]
-            else:
-                c = 0
-            if c < self.min_base_quality:
-                continue
-            result.append(c)
-        return result
-
-    def get_mapping_qualities(self):
-        """query mapping quality scores at pileup column position.
-
-        Returns
-        -------
-
-        list: a list of quality scores
-        """
-        if self.plp == NULL or self.plp[0] == NULL:
-            raise ValueError("PileupColumn accessed after iterator finished")
-
-        cdef uint32_t x = 0
-        cdef bam_pileup1_t * p = NULL
-        result = []
-        for x from 0 <= x < self.n_pu:
-            p = &(self.plp[0][x])
-            if p == NULL:
-                raise ValueError(
-                    "pileup buffer out of sync - most likely use of iterator "
-                    "outside loop")
-
-            if pileup_base_qual_skip(p, self.min_base_quality):
-                continue
-            result.append(p.b.core.qual)
-        return result
-
-    def get_query_positions(self):
-        """positions in read at pileup column position.
-
-        Returns
-        -------
-
-        list: a list of read positions
-        """
-        if self.plp == NULL or self.plp[0] == NULL:
-            raise ValueError("PileupColumn accessed after iterator finished")
-
-        cdef uint32_t x = 0
-        cdef bam_pileup1_t * p = NULL
-        result = []
-        for x from 0 <= x < self.n_pu:
-            p = &(self.plp[0][x])
-            if p == NULL:
-                raise ValueError(
-                    "pileup buffer out of sync - most likely use of iterator "
-                    "outside loop")
-
-            if pileup_base_qual_skip(p, self.min_base_quality):
-                continue
-            result.append(p.qpos)
-        return result
-
-    def get_query_names(self):
-        """query/read names aligned at pileup column position.
-
-        Returns
-        -------
-
-        list: a list of query names at pileup column position.
-        """
-        if self.plp == NULL or self.plp[0] == NULL:
-            raise ValueError("PileupColumn accessed after iterator finished")
-
-        cdef uint32_t x = 0
-        cdef bam_pileup1_t * p = NULL
-        result = []
-        for x from 0 <= x < self.n_pu:
-            p = &(self.plp[0][x])
-            if p == NULL:
-                raise ValueError(
-                    "pileup buffer out of sync - most likely use of iterator "
-                    "outside loop")
-
-            if pileup_base_qual_skip(p, self.min_base_quality):
-                continue
-            result.append(charptr_to_str(pysam_bam_get_qname(p.b)))
-        return result
+            pileups.append(makePileupRead(p, self.header))
+        return pileups
 
 
 cdef class PileupRead:
-    '''Representation of a read aligned to a particular position in the
+    """Representation of a read aligned to a particular position in the
     reference sequence.
 
-    '''
-
+    """
     def __init__(self):
-        raise TypeError(
-            "this class cannot be instantiated from Python")
+        raise TypeError("this class cannot be instantiated from Python")
 
     def __str__(self):
         return "\t".join(
@@ -2920,33 +2717,34 @@ cdef class PileupRead:
                  self.is_del, self.is_head,
                  self.is_tail, self.is_refskip)))
 
-    property alignment:
-        """a :class:`pysam.AlignedSegment` object of the aligned read"""
-        def __get__(self):
-            return self._alignment
+    @property
+    def alignment(self):
+        """a :class:`pysam.AlignedSegment` object of the aligned read."""
+        return self._alignment
 
-    property query_position:
+    @property
+    def query_position(self):
         """position of the read base at the pileup site, 0-based.
         None if is_del or is_refskip is set.
 
         """
-        def __get__(self):
-            if self.is_del or self.is_refskip:
-                return None
-            else:
-                return self._qpos
+        if self.is_del or self.is_refskip:
+            return None
+        else:
+            return self._qpos
 
-    property query_position_or_next:
+    @property
+    def query_position_or_next(self):
         """position of the read base at the pileup site, 0-based.
 
         If the current position is a deletion, returns the next
         aligned base.
 
         """
-        def __get__(self):
-            return self._qpos
+        return self._qpos
 
-    property indel:
+    @property
+    def indel(self):
         """indel length for the position following the current pileup site.
 
         This quantity peeks ahead to the next cigar operation in this
@@ -2955,34 +2753,36 @@ cdef class PileupRead:
         negation. 0 if the next operation is not an indel.
 
         """
-        def __get__(self):
-            return self._indel
+        return self._indel
 
-    property level:
-        """the level of the read in the "viewer" mode. Note that this value
-        is currently not computed."""
-        def __get__(self):
-            return self._level
+    @property
+    def level(self):
+        """the level of the read in the "viewer" mode.
 
-    property is_del:
-        """1 iff the base on the padded read is a deletion"""
-        def __get__(self):
-            return self._is_del
+        Note that this value is currently not computed.
 
-    property is_head:
-        """1 iff the base on the padded read is the left-most base."""
-        def __get__(self):
-            return self._is_head
+        """
+        return self._level
 
-    property is_tail:
-        """1 iff the base on the padded read is the right-most base."""
-        def __get__(self):
-            return self._is_tail
+    @property
+    def is_del(self):
+        """True iff the base on the padded read is a deletion."""
+        return bool(self._is_del)
 
-    property is_refskip:
-        """1 iff the base on the padded read is part of CIGAR N op."""
-        def __get__(self):
-            return self._is_refskip
+    @property
+    def is_head(self):
+        """True iff the base on the padded read is the left-most base."""
+        return bool(self._is_head)
+
+    @property
+    def is_tail(self):
+        """True iff the base on the padded read is the right-most base."""
+        return bool(self._is_tail)
+
+    @property
+    def is_refskip(self):
+        """True iff the base on the padded read is part of CIGAR N op."""
+        return bool(self._is_refskip)
 
 
 
@@ -3052,4 +2852,5 @@ __all__ = [
     "FQCFAIL",
     "FDUP",
     "FSUPPLEMENTARY",
-    "KEY_NAMES"]
+    "KEY_NAMES",
+]

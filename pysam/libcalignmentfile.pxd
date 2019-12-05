@@ -1,3 +1,5 @@
+# cython: language_level=3, embedsignature=True, profile=True
+
 from libc.stdint cimport int8_t, int16_t, int32_t, int64_t
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdlib cimport malloc, calloc, realloc, free
@@ -143,8 +145,6 @@ cdef class IteratorColumn:
 
     cdef reset(self, tid, start, stop)
     cdef _free_pileup_iter(self)
-    # backwards compatibility
-    cdef char * getSequence(self)
     
 
 cdef class IteratorColumnRegion(IteratorColumn):

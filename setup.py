@@ -28,16 +28,16 @@ import re
 import subprocess
 import sys
 import sysconfig
+
 from contextlib import contextmanager
 from setuptools import setup
 from cy_build import CyExtension as Extension, cy_build_ext as build_ext
+
 try:
     import cython
     HAVE_CYTHON = True
 except ImportError:
     HAVE_CYTHON = False
-
-IS_PYTHON3 = sys.version_info.major >= 3
 
 
 @contextmanager
@@ -212,9 +212,6 @@ modules = [
          libraries=libraries_for_pysam_module),
     dict(name="pysam.libctabixproxies",
          sources=[source_pattern % "tabixproxies"] + htslib_sources + os_c_files,
-         libraries=libraries_for_pysam_module),
-    dict(name="pysam.libcvcf",
-         sources=[source_pattern % "vcf"] + htslib_sources + os_c_files,
          libraries=libraries_for_pysam_module),
 ]
 
