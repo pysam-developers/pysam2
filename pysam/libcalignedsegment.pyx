@@ -980,6 +980,10 @@ cdef class AlignedSegment:
     def compare(self, AlignedSegment other):
         """return -1,0,1, if contents in this are binary <,=,> to *other*."""
 
+        # avoid segfault when other equals None
+        if other is None:
+            return -1
+
         cdef int retval, x
         cdef bam1_t *t
         cdef bam1_t *o
