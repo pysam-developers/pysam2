@@ -68,7 +68,7 @@ cpdef get_verbosity():
 ## HFile wrapper class
 ########################################################################
 
-cdef class HFile(object):
+cdef class HFile(io.IOBase):
     cdef hFILE *fp
     cdef readonly object name, mode
 
@@ -297,11 +297,10 @@ cdef class HFile(object):
 ## HTSFile wrapper class (base class for AlignmentFile and VariantFile)
 ########################################################################
 
-cdef class HTSFile(object):
+cdef class HTSFile(io.IOBase):
     """
     Base class for HTS file types
     """
-
     def __cinit__(self, *args, **kwargs):
         self.htsfile = NULL
         self.threads = 1
@@ -393,54 +392,19 @@ cdef class HTSFile(object):
             free(desc)
 
     @property
-    def is_open(self):
-        """return True if HTSFile is open and in a valid state."""
-        return self.htsfile != NULL
-
-    @property
-    def is_closed(self):
-        """return True if HTSFile is closed."""
-        return self.htsfile == NULL
-
-    @property
     def closed(self):
         """return True if HTSFile is closed."""
         return self.htsfile == NULL
 
     @property
-    def is_write(self):
+    def writable(self):
         """return True if HTSFile is open for writing"""
         return self.htsfile != NULL and self.htsfile.is_write != 0
 
     @property
-    def is_read(self):
+    def readable(self):
         """return True if HTSFile is open for reading"""
         return self.htsfile != NULL and self.htsfile.is_write == 0
-
-    @property
-    def is_sam(self):
-        """return True if HTSFile is reading or writing a SAM alignment file"""
-        return self.htsfile != NULL and self.htsfile.format.format == sam
-
-    @property
-    def is_bam(self):
-        """return True if HTSFile is reading or writing a BAM alignment file"""
-        return self.htsfile != NULL and self.htsfile.format.format == bam
-
-    @property
-    def is_cram(self):
-        """return True if HTSFile is reading or writing a BAM alignment file"""
-        return self.htsfile != NULL and self.htsfile.format.format == cram
-
-    @property
-    def is_vcf(self):
-        """return True if HTSFile is reading or writing a VCF variant file"""
-        return self.htsfile != NULL and self.htsfile.format.format == vcf
-
-    @property
-    def is_bcf(self):
-        """return True if HTSFile is reading or writing a BCF variant file"""
-        return self.htsfile != NULL and self.htsfile.format.format == bcf
 
     def reset(self):
         """reset file position to beginning of file just after the header.
@@ -508,42 +472,42 @@ cdef class HTSFile(object):
                 if htsfile != NULL:
                     hts_set_threads(htsfile, threads)
                 return htsfile
+
+        if isinstance(self.filename, int):
+            fd = self.filename
         else:
-            if isinstance(self.filename, int):
-                fd = self.filename
-            else:
-                fd = self.filename.fileno()
+            fd = self.filename.fileno()
 
-            if self.duplicate_filehandle:
-                dup_fd = dup(fd)
-            else:
-                dup_fd = fd
+        if self.duplicate_filehandle:
+            dup_fd = dup(fd)
+        else:
+            dup_fd = fd
 
-            # Replicate mode normalization done in hts_open_format
-            smode = self.mode.replace(b'b', b'').replace(b'c', b'')
-            if b'b' in self.mode:
-                smode += b'b'
-            elif b'c' in self.mode:
-                smode += b'c'
-            cmode = smode
+        # Replicate mode normalization done in hts_open_format
+        smode = self.mode.replace(b'b', b'').replace(b'c', b'')
+        if b'b' in self.mode:
+            smode += b'b'
+        elif b'c' in self.mode:
+            smode += b'c'
+        cmode = smode
 
-            hfile = hdopen(dup_fd, cmode)
-            if hfile == NULL:
-                raise IOError('Cannot create hfile')
+        hfile = hdopen(dup_fd, cmode)
+        if hfile == NULL:
+            raise IOError('Cannot create hfile')
 
-            try:
-                # filename.name can be an int
-                filename = str(self.filename.name)
-            except AttributeError:
-                filename = '<fd:{}>'.format(fd)
+        try:
+            # filename.name can be an int
+            filename = str(self.filename.name)
+        except AttributeError:
+            filename = '<fd:{}>'.format(fd)
 
-            filename = encode_filename(filename)
-            cfilename = filename
-            with nogil:
-                htsfile = hts_hopen(hfile, cfilename, cmode)
-                if htsfile != NULL:
-                    hts_set_threads(htsfile, threads)
-                return htsfile
+        filename = encode_filename(filename)
+        cfilename = filename
+        with nogil:
+            htsfile = hts_hopen(hfile, cfilename, cmode)
+            if htsfile != NULL:
+                hts_set_threads(htsfile, threads)
+            return htsfile
 
     def add_hts_options(self, format_options=None):
         """Given a list of key=value format option strings, add them to an open htsFile

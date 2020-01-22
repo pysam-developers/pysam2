@@ -27,7 +27,7 @@ __all__ = ["BGZFile"]
 BUFFER_SIZE = io.DEFAULT_BUFFER_SIZE
 
 
-cdef class BGZFile(object):
+cdef class BGZFile(io.IOBase):
     """The BGZFile class simulates most of the methods of a file object with
     the exception of the truncate() method.
 

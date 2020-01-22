@@ -298,7 +298,7 @@ cdef inline uint8_t get_btag_typecode(value, min_value=None, max_value=None):
     else:
         # Note: hex strings (H) are not supported yet
         if t is not bytes:
-            value = value.encode('ascii')
+            value = value.encode('utf-8')
         if len(value) == 1:
             typecode = b'A'
         else:
