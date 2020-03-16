@@ -2988,7 +2988,10 @@ cdef class VariantRecord(object):
 
     def copy(self):
         """return a copy of this VariantRecord object"""
-        return makeVariantRecord(self.header, bcf_dup(self.ptr))
+        cdef bcf1_t r = bcf_dup(self.ptr)
+        if bcf_unpack(r, BCF_UN_ALL) < 0:
+            raise ValueError('Error unpacking VariantRecord')
+        return makeVariantRecord(self.header, r)
 
     def translate(self, VariantHeader dst_header):
         if dst_header is None:
